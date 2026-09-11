@@ -49,6 +49,7 @@ Move the history, preserve the habit. Imported entries keep useful Day One metad
 - Daily Notes uses a minimal `## Journal` template.
 - `Cmd/Ctrl+Shift+J` opens Quick Capture and appends a timestamped entry.
 - List, photo, map, and interactive calendar views lead into Obsidian's normal Markdown editor.
+- Phones use a touch-first timeline, photo calendar, bottom journal navigation, full-width editor, and safe-area-aware capture sheet.
 - The first embedded image supplies calendar artwork. Missing remote originals remain explicitly reported.
 
 In the handoff, give the source, vault, entry/day/media totals, missing items, backup paths, verification result, and whether Obsidian was opened. Never quote private journal content.

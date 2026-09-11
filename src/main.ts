@@ -4,6 +4,7 @@ import {
   MarkdownView,
   Modal,
   Notice,
+  Platform,
   Plugin,
   TFile,
   WorkspaceLeaf,
@@ -349,6 +350,7 @@ class DayOneShellView extends ItemView {
 export default class DayOneShellPlugin extends Plugin {
   async onload(): Promise<void> {
     document.body.addClass("day-one-vault");
+    document.body.toggleClass("day-one-mobile", Platform.isMobile);
     this.registerView(VIEW_TYPE, (leaf) => new DayOneShellView(leaf, this));
     this.addCommand({ id: "open-journal", name: "Open journal", callback: () => this.activateView() });
     this.addCommand({ id: "quick-capture", name: "Quick capture", hotkeys: [{ modifiers: ["Mod", "Shift"], key: "J" }], callback: () => new CaptureModal(this.app, this).open() });
@@ -361,14 +363,16 @@ export default class DayOneShellPlugin extends Plugin {
   }
 
   onunload(): void {
-    document.body.removeClass("day-one-vault");
+    document.body.removeClass("day-one-vault", "day-one-mobile");
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
   }
 
   async activateView(): Promise<void> {
     let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
     if (!leaf) {
-      leaf = this.app.workspace.getLeftLeaf(false) ?? this.app.workspace.getLeaf("split", "vertical");
+      leaf = Platform.isMobile
+        ? this.app.workspace.getLeaf("tab")
+        : this.app.workspace.getLeftLeaf(false) ?? this.app.workspace.getLeaf("split", "vertical");
       await leaf.setViewState({ type: VIEW_TYPE, active: true });
     }
     this.app.workspace.revealLeaf(leaf);

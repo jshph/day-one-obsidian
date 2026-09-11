@@ -30,6 +30,9 @@ class SetupObsidianTests(unittest.TestCase):
             self.assertTrue((obsidian / "plugins/day-one-shell/main.js").is_file())
             self.assertEqual((vault / "Templates/Daily Journal.md").read_text(encoding="utf-8"), "## Journal\n")
 
+            # Obsidian may rewrite JSON whitespace or key order at startup.
+            (obsidian / "appearance.json").write_text(json.dumps(appearance, separators=(",", ":")), encoding="utf-8")
+
             second = subprocess.run(
                 ["python3", str(SCRIPT), "--vault", str(vault)],
                 check=True, capture_output=True, text=True,

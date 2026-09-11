@@ -35,6 +35,18 @@ def json_text(value: Any) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
 
 
+def content_matches(path: pathlib.Path, desired: str) -> bool:
+    if not path.exists():
+        return False
+    current = path.read_text(encoding="utf-8")
+    if path.suffix.lower() == ".json":
+        try:
+            return json.loads(current) == json.loads(desired)
+        except json.JSONDecodeError:
+            return False
+    return current == desired
+
+
 def enable_core_plugin(config: Any, plugin: str) -> Any:
     if isinstance(config, list):
         return config if plugin in config else [*config, plugin]
@@ -138,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 2
 
-    changes = [path for path, content in desired.items() if not path.exists() or path.read_text(encoding="utf-8") != content]
+    changes = [path for path, content in desired.items() if not content_matches(path, content)]
     plan = {
         "vault": str(vault),
         "plugin": PLUGIN_ID,

@@ -29,6 +29,9 @@ Backups and reports are written beneath `~/.dayone-to-obsidian/backups/`.
 - Click an existing calendar date to open it; click an empty date to create it.
 - The first image in a note becomes its calendar thumbnail.
 - New notes never require title, tags, mood, weather, or location metadata.
+- On phones and small tablets, the same plugin becomes a touch-first layout with top view controls, bottom journal navigation, full-width editing, and safe-area-aware capture.
+
+The responsive layout follows Day One's current mobile model: [List, Calendar, Media, and Map views](https://dayoneapp.com/guides/tips-and-tutorials/journal-views-in-day-one-for-ios/) remain one tap away, and [calendar dates open the selected day](https://dayoneapp.com/guides/tips-and-tutorials/calendar-view-in-day-one/).
 
 Remote-only attachment records, encrypted placeholders, and unsupported rich text are reported rather than silently invented or discarded.
 

@@ -4301,6 +4301,7 @@ var DayOneShellView = class extends import_obsidian.ItemView {
 var DayOneShellPlugin = class extends import_obsidian.Plugin {
   async onload() {
     document.body.addClass("day-one-vault");
+    document.body.toggleClass("day-one-mobile", import_obsidian.Platform.isMobile);
     this.registerView(VIEW_TYPE, (leaf) => new DayOneShellView(leaf, this));
     this.addCommand({ id: "open-journal", name: "Open journal", callback: () => this.activateView() });
     this.addCommand({ id: "quick-capture", name: "Quick capture", hotkeys: [{ modifiers: ["Mod", "Shift"], key: "J" }], callback: () => new CaptureModal(this.app, this).open() });
@@ -4312,14 +4313,14 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     });
   }
   onunload() {
-    document.body.removeClass("day-one-vault");
+    document.body.removeClass("day-one-vault", "day-one-mobile");
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
   }
   async activateView() {
     var _a;
     let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
     if (!leaf) {
-      leaf = (_a = this.app.workspace.getLeftLeaf(false)) != null ? _a : this.app.workspace.getLeaf("split", "vertical");
+      leaf = import_obsidian.Platform.isMobile ? this.app.workspace.getLeaf("tab") : (_a = this.app.workspace.getLeftLeaf(false)) != null ? _a : this.app.workspace.getLeaf("split", "vertical");
       await leaf.setViewState({ type: VIEW_TYPE, active: true });
     }
     this.app.workspace.revealLeaf(leaf);

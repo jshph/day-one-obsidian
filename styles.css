@@ -745,3 +745,395 @@ body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
   color: white;
   background-color: #42b8f5 !important;
 }
+
+/* Phone and small-tablet layout, following Day One's top views + bottom navigation. */
+@media (max-width: 700px) {
+  body.day-one-vault {
+    --day-one-mobile-nav-height: 66px;
+  }
+
+  body.day-one-vault .workspace-split.mod-left-split:has(.day-one-shell),
+  body.day-one-vault .workspace-split.mod-root:has(.day-one-shell),
+  body.day-one-vault .workspace-tabs:has(.day-one-shell) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 auto !important;
+    border: 0;
+  }
+
+  body.day-one-vault .workspace-leaf-content[data-type="day-one-shell-view"],
+  body.day-one-vault .day-one-shell,
+  body.day-one-vault .day-one-shell-grid {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.day-one-vault .day-one-shell-grid {
+    position: relative;
+    display: block;
+    padding-bottom: calc(var(--day-one-mobile-nav-height) + env(safe-area-inset-bottom));
+    background: var(--background-primary);
+  }
+
+  body.day-one-vault .day-one-journal-rail {
+    position: absolute;
+    z-index: 20;
+    inset: auto 0 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    height: calc(var(--day-one-mobile-nav-height) + env(safe-area-inset-bottom));
+    padding: 5px 8px env(safe-area-inset-bottom);
+    overflow: visible;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--divider-color) 70%, transparent);
+    background: color-mix(in srgb, var(--background-primary) 94%, transparent);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, .08);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+
+  body.day-one-vault .day-one-rail-nav {
+    display: contents;
+  }
+
+  body.day-one-vault .day-one-rail-divider,
+  body.day-one-vault .day-one-journals-heading,
+  body.day-one-vault .day-one-rail-lower,
+  body.day-one-vault .day-one-window-dots {
+    display: none !important;
+  }
+
+  body.day-one-vault .day-one-rail-button,
+  body.day-one-vault .day-one-journal-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 54px;
+    padding: 3px 2px;
+    border-radius: 11px;
+    color: var(--text-muted);
+    background: transparent !important;
+  }
+
+  body.day-one-vault .day-one-rail-button.is-active,
+  body.day-one-vault .day-one-journal-row.is-active {
+    color: var(--day-one-blue);
+    background: color-mix(in srgb, var(--day-one-blue) 10%, transparent) !important;
+  }
+
+  body.day-one-vault .day-one-rail-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.9;
+  }
+
+  body.day-one-vault .day-one-book {
+    width: 12px;
+    height: 21px;
+  }
+
+  body.day-one-vault .day-one-rail-label,
+  body.day-one-vault .day-one-journal-label {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.1;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.day-one-vault .day-one-rail-trailing,
+  body.day-one-vault .day-one-journal-count {
+    display: none;
+  }
+
+  body.day-one-vault .day-one-compose {
+    position: absolute;
+    z-index: 24;
+    top: auto;
+    right: 18px;
+    bottom: calc(var(--day-one-mobile-nav-height) + env(safe-area-inset-bottom) + 15px);
+    left: auto;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 50%;
+    color: white;
+    background: var(--day-one-blue);
+    box-shadow: 0 8px 24px rgba(24, 139, 211, .36);
+  }
+
+  body.day-one-vault .day-one-compose svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  body.day-one-vault .day-one-browser {
+    display: grid;
+    grid-template-rows: calc(54px + env(safe-area-inset-top)) 1fr;
+    width: 100%;
+    height: 100%;
+  }
+
+  body.day-one-vault .day-one-browser-toolbar {
+    position: sticky;
+    z-index: 12;
+    top: 0;
+    gap: 4px;
+    min-width: 0;
+    padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
+    border-bottom-color: color-mix(in srgb, var(--divider-color) 72%, transparent);
+    background: color-mix(in srgb, var(--background-primary) 94%, transparent);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+
+  body.day-one-vault .day-one-mode-switcher,
+  body.day-one-vault .day-one-browser-tools {
+    gap: 1px;
+    min-width: 0;
+    padding: 1px;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  body.day-one-vault .day-one-icon-button,
+  body.day-one-vault .day-one-search-wrap {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 10px;
+  }
+
+  body.day-one-vault .day-one-icon-button svg,
+  body.day-one-vault .day-one-search-wrap svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  body.day-one-vault .day-one-browser-tools .day-one-icon-button {
+    display: none;
+  }
+
+  body.day-one-vault .day-one-search-wrap:focus-within {
+    position: absolute;
+    inset: calc(6px + env(safe-area-inset-top)) 8px 6px;
+    z-index: 3;
+    width: auto;
+    padding-inline: 13px;
+    background: var(--background-secondary);
+  }
+
+  body.day-one-vault .day-one-browser-scroll {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.day-one-vault .day-one-month-heading {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    padding: 11px 16px 9px;
+    font-size: 20px;
+    background: var(--background-primary);
+  }
+
+  body.day-one-vault .day-one-entry-row {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    min-height: 82px;
+    padding: 9px 14px 9px 12px;
+    touch-action: manipulation;
+  }
+
+  body.day-one-vault .day-one-entry-row.is-selected {
+    color: var(--text-normal);
+    background: color-mix(in srgb, var(--day-one-blue) 12%, var(--background-primary)) !important;
+    box-shadow: inset 3px 0 var(--day-one-blue) !important;
+  }
+
+  body.day-one-vault .day-one-date-badge {
+    width: 42px;
+    height: 58px;
+    border-radius: 10px;
+  }
+
+  body.day-one-vault .day-one-date-badge .weekday {
+    font-size: 9px;
+  }
+
+  body.day-one-vault .day-one-date-badge .day {
+    font-size: 28px;
+  }
+
+  body.day-one-vault .day-one-entry-title {
+    font-size: 16px;
+  }
+
+  body.day-one-vault .day-one-entry-preview {
+    font-size: 13.5px;
+    line-height: 1.25;
+    -webkit-line-clamp: 2;
+  }
+
+  body.day-one-vault .day-one-entry-meta {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  body.day-one-vault .day-one-entry-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 8px;
+  }
+
+  body.day-one-vault .day-one-photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 2px;
+  }
+
+  body.day-one-vault .day-one-photo-card {
+    min-height: 0;
+    aspect-ratio: 1;
+    border-radius: 2px;
+  }
+
+  body.day-one-vault .day-one-photo-card span {
+    padding: 25px 7px 7px;
+    font-size: 10px;
+  }
+
+  body.day-one-vault .day-one-location-row {
+    width: calc(100% - 24px);
+    min-height: 64px;
+    margin: 8px 12px;
+    padding: 13px;
+    border-radius: 13px;
+  }
+
+  body.day-one-vault .mode-calendar > .day-one-weekdays,
+  body.day-one-vault .mode-calendar .day-one-calendar-grid {
+    gap: 4px;
+    padding-inline: 12px;
+  }
+
+  body.day-one-vault .mode-calendar > .day-one-weekdays {
+    padding-top: 9px;
+    padding-bottom: 7px;
+    font-size: 11px;
+  }
+
+  body.day-one-vault .mode-calendar .day-one-month-heading {
+    padding: 13px 14px 8px;
+    font-size: 22px;
+  }
+
+  body.day-one-vault .mode-calendar .day-one-calendar-grid {
+    padding-top: 3px;
+    padding-bottom: 18px;
+  }
+
+  body.day-one-vault .mode-calendar .day-one-calendar-day,
+  body.day-one-vault .mode-calendar .day-one-calendar-grid .is-blank {
+    height: auto;
+    min-height: 44px;
+    aspect-ratio: 1;
+    border-radius: 9px;
+    font-size: 15px;
+    line-height: 1;
+    touch-action: manipulation;
+  }
+
+  body.day-one-vault .mode-calendar .day-one-calendar-day:active,
+  body.day-one-vault .day-one-entry-row:active,
+  body.day-one-vault .day-one-photo-card:active,
+  body.day-one-vault .day-one-location-row:active {
+    transform: scale(.96);
+  }
+
+  body.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header {
+    height: calc(46px + env(safe-area-inset-top));
+    min-height: calc(46px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  body.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header-title-container {
+    visibility: hidden;
+  }
+
+  body.day-one-vault .day-one-editor-date {
+    top: calc(16px + env(safe-area-inset-top));
+    right: 48px;
+    left: 48px;
+    overflow: hidden;
+    font-size: 12px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.day-one-vault .markdown-source-view.mod-cm6 .cm-sizer {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none;
+  }
+
+  body.day-one-vault .markdown-source-view.mod-cm6 .cm-content,
+  body.day-one-vault .markdown-preview-view {
+    width: 100%;
+    max-width: none;
+    padding: 30px 20px calc(86px + env(safe-area-inset-bottom));
+  }
+
+  body.day-one-vault .markdown-source-view.mod-cm6 .cm-line,
+  body.day-one-vault .markdown-preview-view {
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  body.day-one-vault .day-one-entry-title-line,
+  body.day-one-vault .has-day-one-import .cm-content > .cm-line:nth-child(8) {
+    font-size: 23px !important;
+    line-height: 1.2 !important;
+  }
+
+  body.day-one-vault .day-one-editor-meta-bar {
+    min-height: calc(45px + env(safe-area-inset-bottom));
+    gap: 10px;
+    padding: 0 14px env(safe-area-inset-bottom);
+    font-size: 11px;
+  }
+
+  body.day-one-vault .day-one-capture-modal {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: calc(92vh - env(safe-area-inset-top));
+    margin: 0;
+    padding: 22px 18px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+  }
+
+  body.day-one-vault .day-one-capture-modal textarea {
+    min-height: 38vh;
+    font-size: 17px;
+  }
+
+  body.day-one-vault .day-one-capture-actions button {
+    min-width: 84px;
+    min-height: 44px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body.day-one-vault .day-one-icon-button:hover,
+  body.day-one-vault .day-one-entry-row:hover,
+  body.day-one-vault .day-one-calendar-day:hover {
+    transform: none;
+  }
+}
