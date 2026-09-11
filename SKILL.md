@@ -45,6 +45,7 @@ Move the history, preserve the habit. Imported entries keep useful Day One metad
 
 - One `daily/YYYY-MM-DD.md` note per local calendar day.
 - Multiple entries stay separate and chronological.
+- Timeline cards target the exact entry; multi-entry dates show counts and gain a time switcher plus `+ New` inside the daily note.
 - Imported metadata is preserved compactly; the plugin presents it rather than asking the user to manage it.
 - Daily Notes uses a minimal `## Journal` template.
 - `Cmd/Ctrl+Shift+J` opens Quick Capture and appends a timestamped entry.

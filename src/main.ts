@@ -22,10 +22,12 @@ type FilterMode = "all" | "today" | "on-this-day";
 interface Entry {
   file: TFile;
   date: Moment;
+  line: number;
   title: string;
   preview: string;
   imageUrl?: string;
   location?: string;
+  weather?: string;
 }
 
 function displayTimestamp(date: Moment): string {
@@ -52,18 +54,33 @@ function friendlyMonth(date: Moment): string {
   return date.format("MMMM YYYY");
 }
 
+function splitTimestampedEntries(raw: string): Array<{ text: string; line: number }> {
+  const headings = Array.from(raw.matchAll(/^###\s+\d{1,2}:\d{2}\s+[AP]M\s*$/gim));
+  if (!headings.length) return [{ text: raw, line: 0 }];
+  return headings.map((heading, index) => {
+    const start = heading.index ?? 0;
+    const end = headings[index + 1]?.index ?? raw.length;
+    return {
+      text: raw.slice(start, end),
+      line: raw.slice(0, start).split("\n").length - 1,
+    };
+  });
+}
+
 class CaptureModal extends Modal {
   private plugin: DayOneShellPlugin;
+  private date: Moment;
 
-  constructor(app: App, plugin: DayOneShellPlugin) {
+  constructor(app: App, plugin: DayOneShellPlugin, date = moment()) {
     super(app);
     this.plugin = plugin;
+    this.date = date;
   }
 
   onOpen(): void {
     this.modalEl.addClass("day-one-capture-modal");
     this.titleEl.setText("New journal entry");
-    const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: moment().format("dddd, MMMM D · h:mm A") });
+    const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: this.date.format("dddd, MMMM D · h:mm A") });
     const input = this.contentEl.createEl("textarea", { attr: { placeholder: "What’s on your mind?", rows: "9" } });
     const actions = this.contentEl.createDiv({ cls: "day-one-capture-actions" });
     const cancel = actions.createEl("button", { text: "Cancel" });
@@ -72,7 +89,7 @@ class CaptureModal extends Modal {
     save.onclick = async () => {
       const value = input.value.trim();
       if (!value) return;
-      await this.plugin.appendCapture(value);
+      await this.plugin.appendCapture(value, this.date);
       this.close();
     };
     input.addEventListener("keydown", async (event) => {
@@ -97,6 +114,7 @@ class DayOneShellView extends ItemView {
   search = "";
   private browserEl?: HTMLElement;
   private entries: Entry[] = [];
+  private refreshTimer?: number;
 
   constructor(leaf: WorkspaceLeaf, plugin: DayOneShellPlugin) {
     super(leaf);
@@ -112,7 +130,9 @@ class DayOneShellView extends ItemView {
     await this.render();
     this.registerEvent(this.app.vault.on("create", () => this.render()));
     this.registerEvent(this.app.vault.on("delete", () => this.render()));
-    this.registerEvent(this.app.vault.on("modify", () => this.renderBrowser()));
+    this.registerEvent(this.app.vault.on("modify", (file) => {
+      if (file instanceof TFile && file.parent?.path === DAILY_FOLDER) this.scheduleRefresh();
+    }));
     this.registerEvent(this.app.workspace.on("file-open", () => {
       this.updateSelection();
       this.plugin.updateEditorDates();
@@ -126,6 +146,11 @@ class DayOneShellView extends ItemView {
     this.renderJournalRail(shell.createDiv({ cls: "day-one-journal-rail" }));
     this.browserEl = shell.createDiv({ cls: "day-one-browser" });
     this.renderBrowser();
+  }
+
+  private scheduleRefresh(): void {
+    window.clearTimeout(this.refreshTimer);
+    this.refreshTimer = window.setTimeout(() => void this.render(), 350);
   }
 
   private iconButton(parent: HTMLElement, icon: string, label: string, onClick: () => void, active = false): HTMLButtonElement {
@@ -237,8 +262,12 @@ class DayOneShellView extends ItemView {
         month = nextMonth;
         parent.createEl("h2", { cls: "day-one-month-heading", text: month });
       }
-      const row = parent.createEl("button", { cls: `day-one-entry-row${this.app.workspace.getActiveFile()?.path === entry.file.path ? " is-selected" : ""}` });
+      const isDefaultForOpenDay = this.app.workspace.getActiveFile()?.path === entry.file.path
+        && !this.plugin.hasFocusedEntry(entry.file.path)
+        && entries.find((candidate) => candidate.file.path === entry.file.path) === entry;
+      const row = parent.createEl("button", { cls: `day-one-entry-row${this.plugin.isFocusedEntry(entry.file.path, entry.line) || isDefaultForOpenDay ? " is-selected" : ""}` });
       row.dataset.path = entry.file.path;
+      row.dataset.line = String(entry.line);
       const badge = row.createDiv({ cls: "day-one-date-badge" });
       badge.createDiv({ cls: "weekday", text: entry.date.format("ddd").toUpperCase() });
       badge.createDiv({ cls: "day", text: entry.date.format("DD") });
@@ -248,7 +277,7 @@ class DayOneShellView extends ItemView {
       const meta = copy.createDiv({ cls: "day-one-entry-meta", text: entry.date.format("h:mm A") });
       if (entry.location) meta.appendText(`  ·  ${entry.location}`);
       if (entry.imageUrl) row.createEl("img", { cls: "day-one-entry-thumb", attr: { src: entry.imageUrl, alt: "" } });
-      row.onclick = () => this.plugin.openFile(entry.file);
+      row.onclick = () => this.plugin.openEntry(entry);
     }
   }
 
@@ -262,7 +291,7 @@ class DayOneShellView extends ItemView {
       card.style.backgroundImage = `url("${entry.imageUrl}")`;
       const date = card.createSpan({ text: entry.date.format("MMM D") });
       date.createSpan({ text: ` · ${entry.title}` });
-      card.onclick = () => this.plugin.openFile(entry.file);
+      card.onclick = () => this.plugin.openEntry(entry);
     }
   }
 
@@ -283,16 +312,17 @@ class DayOneShellView extends ItemView {
       const copy = row.createSpan();
       copy.createEl("strong", { text: entry.location });
       copy.createEl("small", { text: `${entry.date.format("MMM D, YYYY")} · ${entry.title}` });
-      row.onclick = () => this.plugin.openFile(entry.file);
+      row.onclick = () => this.plugin.openEntry(entry);
     }
   }
 
   private renderCalendar(parent: HTMLElement, entries: Entry[]): void {
-    const entryMap = new Map<string, Entry>();
+    const entryMap = new Map<string, Entry[]>();
     for (const entry of entries) {
       const key = entry.date.format("YYYY-MM-DD");
-      const existing = entryMap.get(key);
-      if (!existing || (!existing.imageUrl && entry.imageUrl)) entryMap.set(key, entry);
+      const dayEntries = entryMap.get(key) ?? [];
+      dayEntries.push(entry);
+      entryMap.set(key, dayEntries);
     }
     const months = new Set(entries.map((entry) => entry.date.format("YYYY-MM")));
     const today = moment();
@@ -312,14 +342,18 @@ class DayOneShellView extends ItemView {
       for (let day = 1; day <= current.daysInMonth(); day++) {
         const date = current.clone().date(day);
         const key = date.format("YYYY-MM-DD");
-        const entry = entryMap.get(key);
-        const stateLabel = entry ? "has journal entry" : "create journal entry";
+        const dayEntries = entryMap.get(key) ?? [];
+        const entry = dayEntries.find((candidate) => candidate.imageUrl) ?? dayEntries[0];
+        const stateLabel = dayEntries.length
+          ? `${dayEntries.length} journal ${dayEntries.length === 1 ? "entry" : "entries"}`
+          : "create journal entry";
         const cell = grid.createEl("button", {
           cls: `day-one-calendar-day${entry ? " has-entry" : ""}${date.isSame(today, "day") ? " is-today" : ""}${activeDate === key ? " is-selected" : ""}`,
           text: String(day),
           attr: { "aria-label": `${date.format("dddd, MMMM D, YYYY")}, ${stateLabel}`, title: `${date.format("MMMM D, YYYY")} · ${stateLabel}` },
         });
         cell.dataset.date = key;
+        if (dayEntries.length > 1) cell.createSpan({ cls: "day-one-calendar-count", text: String(dayEntries.length) });
         if (entry?.imageUrl) {
           cell.addClass("has-photo");
           cell.style.setProperty("background-image", `url("${entry.imageUrl}")`, "important");
@@ -342,12 +376,29 @@ class DayOneShellView extends ItemView {
   updateSelection(): void {
     const path = this.app.workspace.getActiveFile()?.path;
     const basename = this.app.workspace.getActiveFile()?.basename;
-    this.contentEl.querySelectorAll<HTMLElement>(".day-one-entry-row").forEach((row) => row.toggleClass("is-selected", row.dataset.path === path));
+    let selectedDefault = false;
+    this.contentEl.querySelectorAll<HTMLElement>(".day-one-entry-row").forEach((row) => {
+      const line = Number(row.dataset.line);
+      const exact = row.dataset.path === path && this.plugin.isFocusedEntry(path, line);
+      const dayDefault = !selectedDefault && row.dataset.path === path && !this.plugin.hasFocusedEntry(path);
+      row.toggleClass("is-selected", exact || dayDefault);
+      if (dayDefault) selectedDefault = true;
+    });
     this.contentEl.querySelectorAll<HTMLElement>(".day-one-calendar-day").forEach((cell) => cell.toggleClass("is-selected", cell.dataset.date === basename));
   }
 }
 
 export default class DayOneShellPlugin extends Plugin {
+  private focusedEntry?: { path: string; line: number };
+
+  isFocusedEntry(path: string | undefined, line: number): boolean {
+    return Boolean(path && this.focusedEntry?.path === path && this.focusedEntry.line === line);
+  }
+
+  hasFocusedEntry(path: string | undefined): boolean {
+    return Boolean(path && this.focusedEntry?.path === path);
+  }
+
   async onload(): Promise<void> {
     document.body.addClass("day-one-vault");
     document.body.toggleClass("day-one-mobile", Platform.isMobile);
@@ -392,8 +443,9 @@ export default class DayOneShellPlugin extends Plugin {
           void this.decorateEditor(view, file, label);
         } else {
           label.hide();
-          view.containerEl.removeClass("has-day-one-import");
+          view.containerEl.removeClass("has-day-one-import", "has-multiple-day-one-entries");
           view.containerEl.querySelector(".day-one-editor-meta-bar")?.remove();
+          view.containerEl.querySelector(".day-one-entry-jumpbar")?.remove();
         }
       }
     }, 80);
@@ -402,43 +454,68 @@ export default class DayOneShellPlugin extends Plugin {
   private async decorateEditor(view: MarkdownView, file: TFile, label: HTMLElement): Promise<void> {
     const raw = await this.app.vault.cachedRead(file);
     view.containerEl.toggleClass("has-day-one-import", raw.includes("<!-- dayone-entry:"));
-    const firstBlock = raw.match(/<!-- dayone-entry:[A-F0-9-]+:start -->([\s\S]*?)<!-- dayone-entry:[A-F0-9-]+:end -->/i)?.[1] ?? raw;
-    const headingTime = firstBlock.match(/^###\s+(\d{1,2}:\d{2}\s+[AP]M)/im)?.[1];
-    const date = moment(file.basename, "YYYY-MM-DD");
-    if (headingTime) {
-      const parsed = moment(headingTime, "h:mm A");
-      date.hour(parsed.hour()).minute(parsed.minute());
-    } else {
-      const modified = moment(file.stat.mtime);
-      date.hour(modified.hour()).minute(modified.minute());
-    }
-    label.setText(displayTimestamp(date));
+    const entries = await this.entriesForFile(file, raw);
+    const focused = entries.find((entry) => this.focusedEntry?.path === file.path && this.focusedEntry.line === entry.line);
+    view.containerEl.toggleClass("has-multiple-day-one-entries", entries.length > 1);
+    label.setText(focused
+      ? displayTimestamp(focused.date)
+      : entries.length > 1
+        ? `${moment(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} · ${entries.length} entries`
+        : displayTimestamp(entries[0]?.date ?? moment(file.basename, "YYYY-MM-DD")));
     label.show();
 
-    const location = firstBlock.match(/📍\s*([^·\n*]+)/u)?.[1]?.trim();
-    const weather = firstBlock.match(/[🌤☀️🌧]\s*([^*\n]+)/u)?.[1]?.trim();
     let bar = view.containerEl.querySelector<HTMLElement>(".day-one-editor-meta-bar");
     if (!bar) bar = view.containerEl.createDiv({ cls: "day-one-editor-meta-bar" });
     bar.empty();
     bar.createSpan({ cls: "journal", text: "Journal" });
-    if (weather) bar.createSpan({ text: weather });
-    if (location) bar.createSpan({ cls: "location", text: location });
-    bar.toggle(Boolean(weather || location));
+    if (!focused && entries.length > 1) bar.createSpan({ text: `${entries.length} entries today` });
+    if (focused?.weather) bar.createSpan({ text: focused.weather });
+    if (focused?.location) bar.createSpan({ cls: "location", text: focused.location });
+    bar.show();
+
+    let jumpbar = view.containerEl.querySelector<HTMLElement>(".day-one-entry-jumpbar");
+    if (entries.length > 1) {
+      if (!jumpbar) jumpbar = view.containerEl.createDiv({ cls: "day-one-entry-jumpbar" });
+      jumpbar.empty();
+      jumpbar.createSpan({ cls: "day-one-entry-jumpbar-label", text: `${entries.length} entries` });
+      for (const entry of entries) {
+        const selected = focused?.line === entry.line;
+        const button = jumpbar.createEl("button", {
+          cls: `day-one-entry-jump${selected ? " is-active" : ""}`,
+          text: entry.date.format("h:mm A"),
+          attr: { "aria-label": `Open entry from ${entry.date.format("h:mm A")}` },
+        });
+        button.onclick = () => {
+          this.focusedEntry = { path: file.path, line: entry.line };
+          this.focusEditorLine(view, entry.line);
+          void this.decorateEditor(view, file, label);
+        };
+      }
+      const add = jumpbar.createEl("button", { cls: "day-one-entry-jump add", text: "+ New" });
+      add.onclick = () => {
+        const now = moment();
+        const target = moment(file.basename, "YYYY-MM-DD").hour(now.hour()).minute(now.minute()).second(now.second());
+        new CaptureModal(this.app, this, target).open();
+      };
+    } else {
+      jumpbar?.remove();
+    }
 
     const decorateLines = () => {
-      let foundTitle = false;
+      let needsTitle = true;
       const lines = view.containerEl.querySelectorAll<HTMLElement>(".markdown-source-view.mod-cm6 .cm-line");
       lines.forEach((line) => {
         line.removeClass("day-one-scaffold-line", "day-one-entry-title-line");
-        if (foundTitle) return;
         const text = line.textContent?.trim() ?? "";
         const plain = text.replace(/^#+\s*/, "").trim();
-        const isScaffold = !plain || /^Journal$/i.test(plain) || /^\d{1,2}:\d{2}\s+[AP]M$/i.test(plain) || text.startsWith("<!--") || text.startsWith("📍") || Boolean(line.querySelector(".cm-em"));
+        const isTimestamp = /^\d{1,2}:\d{2}\s+[AP]M$/i.test(plain);
+        if (isTimestamp) needsTitle = true;
+        const isScaffold = !plain || /^Journal$/i.test(plain) || isTimestamp || text.startsWith("<!--") || text.startsWith("📍") || Boolean(line.querySelector(".cm-em"));
         if (isScaffold) {
           line.addClass("day-one-scaffold-line");
-        } else {
+        } else if (needsTitle && !text.startsWith("![[")) {
           line.addClass("day-one-entry-title-line");
-          foundTitle = true;
+          needsTitle = false;
         }
       });
     };
@@ -447,15 +524,11 @@ export default class DayOneShellPlugin extends Plugin {
     window.setTimeout(decorateLines, 700);
   }
 
-  async getEntries(): Promise<Entry[]> {
-    const files = this.app.vault.getMarkdownFiles().filter((file) => file.parent?.path === DAILY_FOLDER && DATE_RE.test(file.basename));
-    const grouped = await Promise.all(files.map(async (file): Promise<Entry[]> => {
-      const raw = await this.app.vault.cachedRead(file);
-      const cache = this.app.metadataCache.getFileCache(file);
-      const frontmatter = cache?.frontmatter ?? {};
-      const blocks = Array.from(raw.matchAll(/<!-- dayone-entry:[A-F0-9-]+:start -->([\s\S]*?)<!-- dayone-entry:[A-F0-9-]+:end -->/gi));
-      const segments = blocks.length ? blocks.map((match) => match[1]) : [raw];
-      return segments.map((segment): Entry => {
+  async entriesForFile(file: TFile, providedRaw?: string): Promise<Entry[]> {
+    const raw = providedRaw ?? await this.app.vault.cachedRead(file);
+    const cache = this.app.metadataCache.getFileCache(file);
+    const frontmatter = cache?.frontmatter ?? {};
+    return splitTimestampedEntries(raw).map(({ text: segment, line }): Entry => {
         let date = moment(file.basename, "YYYY-MM-DD");
         const headingTime = segment.match(/^###\s+(\d{1,2}:\d{2}\s+[AP]M)/im)?.[1];
         const importedTimestamp = frontmatter.date || frontmatter.created || frontmatter.creationDate;
@@ -473,9 +546,10 @@ export default class DayOneShellPlugin extends Plugin {
         const preview = lines.slice(1).join(" ").slice(0, 170);
         const inlineLocation = segment.match(/^📍\s*([^·\n]+)/mu)?.[1]?.trim();
         const location = inlineLocation || frontmatter.location || frontmatter.place || frontmatter.address;
+        const weather = segment.match(/[🌤☀️🌧]\s*([^*\n]+)/u)?.[1]?.trim();
         let imageUrl: string | undefined;
         const inlineEmbed = segment.match(/!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/)?.[1];
-        const embedLink = inlineEmbed || cache?.embeds?.find((item) => /\.(png|jpe?g|gif|webp|heic)$/i.test(item.link))?.link;
+        const embedLink = inlineEmbed;
         if (embedLink) {
           const directImage = this.app.vault.getAbstractFileByPath(normalizePath(embedLink));
           const imageFile = directImage instanceof TFile
@@ -483,9 +557,13 @@ export default class DayOneShellPlugin extends Plugin {
             : this.app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
           if (imageFile) imageUrl = this.app.vault.getResourcePath(imageFile);
         }
-        return { file, date, title, preview, imageUrl, location };
-      });
-    }));
+        return { file, date, line, title, preview, imageUrl, location, weather };
+    });
+  }
+
+  async getEntries(): Promise<Entry[]> {
+    const files = this.app.vault.getMarkdownFiles().filter((file) => file.parent?.path === DAILY_FOLDER && DATE_RE.test(file.basename));
+    const grouped = await Promise.all(files.map((file) => this.entriesForFile(file)));
     return grouped.flat().sort((a, b) => b.date.valueOf() - a.date.valueOf());
   }
 
@@ -498,22 +576,42 @@ export default class DayOneShellPlugin extends Plugin {
   }
 
   async openDate(date: Moment): Promise<void> {
+    this.focusedEntry = undefined;
     await this.openFile(await this.ensureDailyNote(date));
   }
 
-  async openFile(file: TFile): Promise<void> {
+  async openEntry(entry: Entry): Promise<void> {
+    this.focusedEntry = { path: entry.file.path, line: entry.line };
+    await this.openFile(entry.file, entry.line);
+  }
+
+  async openFile(file: TFile, line?: number): Promise<void> {
     const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")[0] ?? this.app.workspace.getLeaf("tab");
     await markdownLeaf.openFile(file);
     this.app.workspace.setActiveLeaf(markdownLeaf, { focus: true });
+    this.updateEditorDates();
+    if (line !== undefined && markdownLeaf.view instanceof MarkdownView) {
+      const view = markdownLeaf.view;
+      window.setTimeout(() => this.focusEditorLine(view, line), 100);
+    }
   }
 
-  async appendCapture(text: string): Promise<void> {
-    const file = await this.ensureDailyNote(moment());
+  private focusEditorLine(view: MarkdownView, line: number): void {
+    const target = { line: Math.min(line + 1, Math.max(0, view.editor.lineCount() - 1)), ch: 0 };
+    view.editor.setCursor(target);
+    view.editor.scrollIntoView({ from: target, to: target }, true);
+  }
+
+  async appendCapture(text: string, date = moment()): Promise<void> {
+    const file = await this.ensureDailyNote(date);
     await this.app.vault.process(file, (current) => {
       const base = current.trimEnd();
-      return `${base}\n\n### ${moment().format("h:mm A")}\n\n${text}\n`;
+      return `${base}\n\n### ${date.format("h:mm A")}\n\n${text}\n`;
     });
-    await this.openFile(file);
-    new Notice("Saved to today’s journal");
+    const entries = await this.entriesForFile(file);
+    const latest = entries[entries.length - 1];
+    if (latest) await this.openEntry(latest);
+    else await this.openFile(file);
+    new Notice(date.isSame(moment(), "day") ? "Saved to today’s journal" : `Saved to ${date.format("MMMM D")}`);
   }
 }

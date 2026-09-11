@@ -3991,15 +3991,29 @@ function stripEntryText(raw) {
 function friendlyMonth(date) {
   return date.format("MMMM YYYY");
 }
+function splitTimestampedEntries(raw) {
+  const headings = Array.from(raw.matchAll(/^###\s+\d{1,2}:\d{2}\s+[AP]M\s*$/gim));
+  if (!headings.length) return [{ text: raw, line: 0 }];
+  return headings.map((heading, index) => {
+    var _a, _b, _c;
+    const start = (_a = heading.index) != null ? _a : 0;
+    const end = (_c = (_b = headings[index + 1]) == null ? void 0 : _b.index) != null ? _c : raw.length;
+    return {
+      text: raw.slice(start, end),
+      line: raw.slice(0, start).split("\n").length - 1
+    };
+  });
+}
 var CaptureModal = class extends import_obsidian.Modal {
-  constructor(app, plugin) {
+  constructor(app, plugin, date = (0, import_moment.default)()) {
     super(app);
     this.plugin = plugin;
+    this.date = date;
   }
   onOpen() {
     this.modalEl.addClass("day-one-capture-modal");
     this.titleEl.setText("New journal entry");
-    const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: (0, import_moment.default)().format("dddd, MMMM D \xB7 h:mm A") });
+    const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: this.date.format("dddd, MMMM D \xB7 h:mm A") });
     const input = this.contentEl.createEl("textarea", { attr: { placeholder: "What\u2019s on your mind?", rows: "9" } });
     const actions = this.contentEl.createDiv({ cls: "day-one-capture-actions" });
     const cancel = actions.createEl("button", { text: "Cancel" });
@@ -4008,7 +4022,7 @@ var CaptureModal = class extends import_obsidian.Modal {
     save.onclick = async () => {
       const value = input.value.trim();
       if (!value) return;
-      await this.plugin.appendCapture(value);
+      await this.plugin.appendCapture(value, this.date);
       this.close();
     };
     input.addEventListener("keydown", async (event) => {
@@ -4047,7 +4061,10 @@ var DayOneShellView = class extends import_obsidian.ItemView {
     await this.render();
     this.registerEvent(this.app.vault.on("create", () => this.render()));
     this.registerEvent(this.app.vault.on("delete", () => this.render()));
-    this.registerEvent(this.app.vault.on("modify", () => this.renderBrowser()));
+    this.registerEvent(this.app.vault.on("modify", (file) => {
+      var _a;
+      if (file instanceof import_obsidian.TFile && ((_a = file.parent) == null ? void 0 : _a.path) === DAILY_FOLDER) this.scheduleRefresh();
+    }));
     this.registerEvent(this.app.workspace.on("file-open", () => {
       this.updateSelection();
       this.plugin.updateEditorDates();
@@ -4060,6 +4077,10 @@ var DayOneShellView = class extends import_obsidian.ItemView {
     this.renderJournalRail(shell.createDiv({ cls: "day-one-journal-rail" }));
     this.browserEl = shell.createDiv({ cls: "day-one-browser" });
     this.renderBrowser();
+  }
+  scheduleRefresh() {
+    window.clearTimeout(this.refreshTimer);
+    this.refreshTimer = window.setTimeout(() => void this.render(), 350);
   }
   iconButton(parent, icon, label, onClick, active = false) {
     const button = parent.createEl("button", { cls: `day-one-icon-button${active ? " is-active" : ""}`, attr: { "aria-label": label, title: label } });
@@ -4191,8 +4212,10 @@ var DayOneShellView = class extends import_obsidian.ItemView {
         month = nextMonth;
         parent.createEl("h2", { cls: "day-one-month-heading", text: month });
       }
-      const row = parent.createEl("button", { cls: `day-one-entry-row${((_a = this.app.workspace.getActiveFile()) == null ? void 0 : _a.path) === entry.file.path ? " is-selected" : ""}` });
+      const isDefaultForOpenDay = ((_a = this.app.workspace.getActiveFile()) == null ? void 0 : _a.path) === entry.file.path && !this.plugin.hasFocusedEntry(entry.file.path) && entries.find((candidate) => candidate.file.path === entry.file.path) === entry;
+      const row = parent.createEl("button", { cls: `day-one-entry-row${this.plugin.isFocusedEntry(entry.file.path, entry.line) || isDefaultForOpenDay ? " is-selected" : ""}` });
       row.dataset.path = entry.file.path;
+      row.dataset.line = String(entry.line);
       const badge = row.createDiv({ cls: "day-one-date-badge" });
       badge.createDiv({ cls: "weekday", text: entry.date.format("ddd").toUpperCase() });
       badge.createDiv({ cls: "day", text: entry.date.format("DD") });
@@ -4202,7 +4225,7 @@ var DayOneShellView = class extends import_obsidian.ItemView {
       const meta = copy.createDiv({ cls: "day-one-entry-meta", text: entry.date.format("h:mm A") });
       if (entry.location) meta.appendText(`  \xB7  ${entry.location}`);
       if (entry.imageUrl) row.createEl("img", { cls: "day-one-entry-thumb", attr: { src: entry.imageUrl, alt: "" } });
-      row.onclick = () => this.plugin.openFile(entry.file);
+      row.onclick = () => this.plugin.openEntry(entry);
     }
   }
   renderGrid(parent, entries) {
@@ -4215,7 +4238,7 @@ var DayOneShellView = class extends import_obsidian.ItemView {
       card.style.backgroundImage = `url("${entry.imageUrl}")`;
       const date = card.createSpan({ text: entry.date.format("MMM D") });
       date.createSpan({ text: ` \xB7 ${entry.title}` });
-      card.onclick = () => this.plugin.openFile(entry.file);
+      card.onclick = () => this.plugin.openEntry(entry);
     }
   }
   renderMap(parent, entries) {
@@ -4236,16 +4259,17 @@ var DayOneShellView = class extends import_obsidian.ItemView {
       const copy = row.createSpan();
       copy.createEl("strong", { text: entry.location });
       copy.createEl("small", { text: `${entry.date.format("MMM D, YYYY")} \xB7 ${entry.title}` });
-      row.onclick = () => this.plugin.openFile(entry.file);
+      row.onclick = () => this.plugin.openEntry(entry);
     }
   }
   renderCalendar(parent, entries) {
-    var _a;
+    var _a, _b, _c, _d;
     const entryMap = /* @__PURE__ */ new Map();
     for (const entry of entries) {
       const key = entry.date.format("YYYY-MM-DD");
-      const existing = entryMap.get(key);
-      if (!existing || !existing.imageUrl && entry.imageUrl) entryMap.set(key, entry);
+      const dayEntries = (_a = entryMap.get(key)) != null ? _a : [];
+      dayEntries.push(entry);
+      entryMap.set(key, dayEntries);
     }
     const months = new Set(entries.map((entry) => entry.date.format("YYYY-MM")));
     const today = (0, import_moment.default)();
@@ -4255,7 +4279,7 @@ var DayOneShellView = class extends import_obsidian.ItemView {
     const ordered = Array.from(months).sort();
     const weekdays = parent.createDiv({ cls: "day-one-weekdays" });
     for (const name of ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) weekdays.createSpan({ text: name });
-    const activeDate = (_a = this.app.workspace.getActiveFile()) == null ? void 0 : _a.basename;
+    const activeDate = (_b = this.app.workspace.getActiveFile()) == null ? void 0 : _b.basename;
     for (const monthKey of ordered) {
       const current = (0, import_moment.default)(`${monthKey}-01`, "YYYY-MM-DD");
       const section = parent.createDiv({ cls: "day-one-calendar-month" });
@@ -4265,14 +4289,16 @@ var DayOneShellView = class extends import_obsidian.ItemView {
       for (let day = 1; day <= current.daysInMonth(); day++) {
         const date = current.clone().date(day);
         const key = date.format("YYYY-MM-DD");
-        const entry = entryMap.get(key);
-        const stateLabel = entry ? "has journal entry" : "create journal entry";
+        const dayEntries = (_c = entryMap.get(key)) != null ? _c : [];
+        const entry = (_d = dayEntries.find((candidate) => candidate.imageUrl)) != null ? _d : dayEntries[0];
+        const stateLabel = dayEntries.length ? `${dayEntries.length} journal ${dayEntries.length === 1 ? "entry" : "entries"}` : "create journal entry";
         const cell = grid.createEl("button", {
           cls: `day-one-calendar-day${entry ? " has-entry" : ""}${date.isSame(today, "day") ? " is-today" : ""}${activeDate === key ? " is-selected" : ""}`,
           text: String(day),
           attr: { "aria-label": `${date.format("dddd, MMMM D, YYYY")}, ${stateLabel}`, title: `${date.format("MMMM D, YYYY")} \xB7 ${stateLabel}` }
         });
         cell.dataset.date = key;
+        if (dayEntries.length > 1) cell.createSpan({ cls: "day-one-calendar-count", text: String(dayEntries.length) });
         if (entry == null ? void 0 : entry.imageUrl) {
           cell.addClass("has-photo");
           cell.style.setProperty("background-image", `url("${entry.imageUrl}")`, "important");
@@ -4294,11 +4320,26 @@ var DayOneShellView = class extends import_obsidian.ItemView {
     var _a, _b;
     const path = (_a = this.app.workspace.getActiveFile()) == null ? void 0 : _a.path;
     const basename = (_b = this.app.workspace.getActiveFile()) == null ? void 0 : _b.basename;
-    this.contentEl.querySelectorAll(".day-one-entry-row").forEach((row) => row.toggleClass("is-selected", row.dataset.path === path));
+    let selectedDefault = false;
+    this.contentEl.querySelectorAll(".day-one-entry-row").forEach((row) => {
+      const line = Number(row.dataset.line);
+      const exact = row.dataset.path === path && this.plugin.isFocusedEntry(path, line);
+      const dayDefault = !selectedDefault && row.dataset.path === path && !this.plugin.hasFocusedEntry(path);
+      row.toggleClass("is-selected", exact || dayDefault);
+      if (dayDefault) selectedDefault = true;
+    });
     this.contentEl.querySelectorAll(".day-one-calendar-day").forEach((cell) => cell.toggleClass("is-selected", cell.dataset.date === basename));
   }
 };
 var DayOneShellPlugin = class extends import_obsidian.Plugin {
+  isFocusedEntry(path, line) {
+    var _a;
+    return Boolean(path && ((_a = this.focusedEntry) == null ? void 0 : _a.path) === path && this.focusedEntry.line === line);
+  }
+  hasFocusedEntry(path) {
+    var _a;
+    return Boolean(path && ((_a = this.focusedEntry) == null ? void 0 : _a.path) === path);
+  }
   async onload() {
     document.body.addClass("day-one-vault");
     document.body.toggleClass("day-one-mobile", import_obsidian.Platform.isMobile);
@@ -4327,7 +4368,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
   }
   updateEditorDates() {
     window.setTimeout(() => {
-      var _a;
+      var _a, _b;
       for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
         const view = leaf.view;
         if (!(view instanceof import_obsidian.MarkdownView)) continue;
@@ -4340,52 +4381,76 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
           void this.decorateEditor(view, file, label);
         } else {
           label.hide();
-          view.containerEl.removeClass("has-day-one-import");
+          view.containerEl.removeClass("has-day-one-import", "has-multiple-day-one-entries");
           (_a = view.containerEl.querySelector(".day-one-editor-meta-bar")) == null ? void 0 : _a.remove();
+          (_b = view.containerEl.querySelector(".day-one-entry-jumpbar")) == null ? void 0 : _b.remove();
         }
       }
     }, 80);
   }
   async decorateEditor(view, file, label) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b;
     const raw = await this.app.vault.cachedRead(file);
     view.containerEl.toggleClass("has-day-one-import", raw.includes("<!-- dayone-entry:"));
-    const firstBlock = (_b = (_a = raw.match(/<!-- dayone-entry:[A-F0-9-]+:start -->([\s\S]*?)<!-- dayone-entry:[A-F0-9-]+:end -->/i)) == null ? void 0 : _a[1]) != null ? _b : raw;
-    const headingTime = (_c = firstBlock.match(/^###\s+(\d{1,2}:\d{2}\s+[AP]M)/im)) == null ? void 0 : _c[1];
-    const date = (0, import_moment.default)(file.basename, "YYYY-MM-DD");
-    if (headingTime) {
-      const parsed = (0, import_moment.default)(headingTime, "h:mm A");
-      date.hour(parsed.hour()).minute(parsed.minute());
-    } else {
-      const modified = (0, import_moment.default)(file.stat.mtime);
-      date.hour(modified.hour()).minute(modified.minute());
-    }
-    label.setText(displayTimestamp(date));
+    const entries = await this.entriesForFile(file, raw);
+    const focused = entries.find((entry) => {
+      var _a2;
+      return ((_a2 = this.focusedEntry) == null ? void 0 : _a2.path) === file.path && this.focusedEntry.line === entry.line;
+    });
+    view.containerEl.toggleClass("has-multiple-day-one-entries", entries.length > 1);
+    label.setText(focused ? displayTimestamp(focused.date) : entries.length > 1 ? `${(0, import_moment.default)(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} \xB7 ${entries.length} entries` : displayTimestamp((_b = (_a = entries[0]) == null ? void 0 : _a.date) != null ? _b : (0, import_moment.default)(file.basename, "YYYY-MM-DD")));
     label.show();
-    const location = (_e = (_d = firstBlock.match(/📍\s*([^·\n*]+)/u)) == null ? void 0 : _d[1]) == null ? void 0 : _e.trim();
-    const weather = (_g = (_f = firstBlock.match(/[🌤☀️🌧]\s*([^*\n]+)/u)) == null ? void 0 : _f[1]) == null ? void 0 : _g.trim();
     let bar = view.containerEl.querySelector(".day-one-editor-meta-bar");
     if (!bar) bar = view.containerEl.createDiv({ cls: "day-one-editor-meta-bar" });
     bar.empty();
     bar.createSpan({ cls: "journal", text: "Journal" });
-    if (weather) bar.createSpan({ text: weather });
-    if (location) bar.createSpan({ cls: "location", text: location });
-    bar.toggle(Boolean(weather || location));
+    if (!focused && entries.length > 1) bar.createSpan({ text: `${entries.length} entries today` });
+    if (focused == null ? void 0 : focused.weather) bar.createSpan({ text: focused.weather });
+    if (focused == null ? void 0 : focused.location) bar.createSpan({ cls: "location", text: focused.location });
+    bar.show();
+    let jumpbar = view.containerEl.querySelector(".day-one-entry-jumpbar");
+    if (entries.length > 1) {
+      if (!jumpbar) jumpbar = view.containerEl.createDiv({ cls: "day-one-entry-jumpbar" });
+      jumpbar.empty();
+      jumpbar.createSpan({ cls: "day-one-entry-jumpbar-label", text: `${entries.length} entries` });
+      for (const entry of entries) {
+        const selected = (focused == null ? void 0 : focused.line) === entry.line;
+        const button = jumpbar.createEl("button", {
+          cls: `day-one-entry-jump${selected ? " is-active" : ""}`,
+          text: entry.date.format("h:mm A"),
+          attr: { "aria-label": `Open entry from ${entry.date.format("h:mm A")}` }
+        });
+        button.onclick = () => {
+          this.focusedEntry = { path: file.path, line: entry.line };
+          this.focusEditorLine(view, entry.line);
+          void this.decorateEditor(view, file, label);
+        };
+      }
+      const add = jumpbar.createEl("button", { cls: "day-one-entry-jump add", text: "+ New" });
+      add.onclick = () => {
+        const now = (0, import_moment.default)();
+        const target = (0, import_moment.default)(file.basename, "YYYY-MM-DD").hour(now.hour()).minute(now.minute()).second(now.second());
+        new CaptureModal(this.app, this, target).open();
+      };
+    } else {
+      jumpbar == null ? void 0 : jumpbar.remove();
+    }
     const decorateLines = () => {
-      let foundTitle = false;
+      let needsTitle = true;
       const lines = view.containerEl.querySelectorAll(".markdown-source-view.mod-cm6 .cm-line");
       lines.forEach((line) => {
         var _a2, _b2;
         line.removeClass("day-one-scaffold-line", "day-one-entry-title-line");
-        if (foundTitle) return;
         const text = (_b2 = (_a2 = line.textContent) == null ? void 0 : _a2.trim()) != null ? _b2 : "";
         const plain = text.replace(/^#+\s*/, "").trim();
-        const isScaffold = !plain || /^Journal$/i.test(plain) || /^\d{1,2}:\d{2}\s+[AP]M$/i.test(plain) || text.startsWith("<!--") || text.startsWith("\u{1F4CD}") || Boolean(line.querySelector(".cm-em"));
+        const isTimestamp = /^\d{1,2}:\d{2}\s+[AP]M$/i.test(plain);
+        if (isTimestamp) needsTitle = true;
+        const isScaffold = !plain || /^Journal$/i.test(plain) || isTimestamp || text.startsWith("<!--") || text.startsWith("\u{1F4CD}") || Boolean(line.querySelector(".cm-em"));
         if (isScaffold) {
           line.addClass("day-one-scaffold-line");
-        } else {
+        } else if (needsTitle && !text.startsWith("![[")) {
           line.addClass("day-one-entry-title-line");
-          foundTitle = true;
+          needsTitle = false;
         }
       });
     };
@@ -4393,48 +4458,48 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     window.setTimeout(decorateLines, 220);
     window.setTimeout(decorateLines, 700);
   }
+  async entriesForFile(file, providedRaw) {
+    var _a;
+    const raw = providedRaw != null ? providedRaw : await this.app.vault.cachedRead(file);
+    const cache = this.app.metadataCache.getFileCache(file);
+    const frontmatter = (_a = cache == null ? void 0 : cache.frontmatter) != null ? _a : {};
+    return splitTimestampedEntries(raw).map(({ text: segment, line }) => {
+      var _a2, _b, _c, _d, _e, _f;
+      let date = (0, import_moment.default)(file.basename, "YYYY-MM-DD");
+      const headingTime = (_a2 = segment.match(/^###\s+(\d{1,2}:\d{2}\s+[AP]M)/im)) == null ? void 0 : _a2[1];
+      const importedTimestamp = frontmatter.date || frontmatter.created || frontmatter.creationDate;
+      if (headingTime) {
+        const parsedTime = (0, import_moment.default)(headingTime, "h:mm A");
+        date.hour(parsedTime.hour()).minute(parsedTime.minute());
+      } else if (importedTimestamp && (0, import_moment.default)(importedTimestamp).isValid()) {
+        date = (0, import_moment.default)(importedTimestamp);
+      } else {
+        const modified = (0, import_moment.default)(file.stat.mtime);
+        date.hour(modified.hour()).minute(modified.minute()).second(modified.second());
+      }
+      const lines = stripEntryText(segment);
+      const title = lines[0] || date.format("dddd, MMMM D");
+      const preview = lines.slice(1).join(" ").slice(0, 170);
+      const inlineLocation = (_c = (_b = segment.match(/^📍\s*([^·\n]+)/mu)) == null ? void 0 : _b[1]) == null ? void 0 : _c.trim();
+      const location = inlineLocation || frontmatter.location || frontmatter.place || frontmatter.address;
+      const weather = (_e = (_d = segment.match(/[🌤☀️🌧]\s*([^*\n]+)/u)) == null ? void 0 : _d[1]) == null ? void 0 : _e.trim();
+      let imageUrl;
+      const inlineEmbed = (_f = segment.match(/!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/)) == null ? void 0 : _f[1];
+      const embedLink = inlineEmbed;
+      if (embedLink) {
+        const directImage = this.app.vault.getAbstractFileByPath((0, import_obsidian.normalizePath)(embedLink));
+        const imageFile = directImage instanceof import_obsidian.TFile ? directImage : this.app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
+        if (imageFile) imageUrl = this.app.vault.getResourcePath(imageFile);
+      }
+      return { file, date, line, title, preview, imageUrl, location, weather };
+    });
+  }
   async getEntries() {
     const files = this.app.vault.getMarkdownFiles().filter((file) => {
       var _a;
       return ((_a = file.parent) == null ? void 0 : _a.path) === DAILY_FOLDER && DATE_RE.test(file.basename);
     });
-    const grouped = await Promise.all(files.map(async (file) => {
-      var _a;
-      const raw = await this.app.vault.cachedRead(file);
-      const cache = this.app.metadataCache.getFileCache(file);
-      const frontmatter = (_a = cache == null ? void 0 : cache.frontmatter) != null ? _a : {};
-      const blocks = Array.from(raw.matchAll(/<!-- dayone-entry:[A-F0-9-]+:start -->([\s\S]*?)<!-- dayone-entry:[A-F0-9-]+:end -->/gi));
-      const segments = blocks.length ? blocks.map((match) => match[1]) : [raw];
-      return segments.map((segment) => {
-        var _a2, _b, _c, _d, _e, _f;
-        let date = (0, import_moment.default)(file.basename, "YYYY-MM-DD");
-        const headingTime = (_a2 = segment.match(/^###\s+(\d{1,2}:\d{2}\s+[AP]M)/im)) == null ? void 0 : _a2[1];
-        const importedTimestamp = frontmatter.date || frontmatter.created || frontmatter.creationDate;
-        if (headingTime) {
-          const parsedTime = (0, import_moment.default)(headingTime, "h:mm A");
-          date.hour(parsedTime.hour()).minute(parsedTime.minute());
-        } else if (importedTimestamp && (0, import_moment.default)(importedTimestamp).isValid()) {
-          date = (0, import_moment.default)(importedTimestamp);
-        } else {
-          const modified = (0, import_moment.default)(file.stat.mtime);
-          date.hour(modified.hour()).minute(modified.minute()).second(modified.second());
-        }
-        const lines = stripEntryText(segment);
-        const title = lines[0] || date.format("dddd, MMMM D");
-        const preview = lines.slice(1).join(" ").slice(0, 170);
-        const inlineLocation = (_c = (_b = segment.match(/^📍\s*([^·\n]+)/mu)) == null ? void 0 : _b[1]) == null ? void 0 : _c.trim();
-        const location = inlineLocation || frontmatter.location || frontmatter.place || frontmatter.address;
-        let imageUrl;
-        const inlineEmbed = (_d = segment.match(/!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/)) == null ? void 0 : _d[1];
-        const embedLink = inlineEmbed || ((_f = (_e = cache == null ? void 0 : cache.embeds) == null ? void 0 : _e.find((item) => /\.(png|jpe?g|gif|webp|heic)$/i.test(item.link))) == null ? void 0 : _f.link);
-        if (embedLink) {
-          const directImage = this.app.vault.getAbstractFileByPath((0, import_obsidian.normalizePath)(embedLink));
-          const imageFile = directImage instanceof import_obsidian.TFile ? directImage : this.app.metadataCache.getFirstLinkpathDest(embedLink, file.path);
-          if (imageFile) imageUrl = this.app.vault.getResourcePath(imageFile);
-        }
-        return { file, date, title, preview, imageUrl, location };
-      });
-    }));
+    const grouped = await Promise.all(files.map((file) => this.entriesForFile(file)));
     return grouped.flat().sort((a, b) => b.date.valueOf() - a.date.valueOf());
   }
   async ensureDailyNote(date) {
@@ -4445,27 +4510,45 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     return this.app.vault.create(path, "");
   }
   async openDate(date) {
+    this.focusedEntry = void 0;
     await this.openFile(await this.ensureDailyNote(date));
   }
-  async openFile(file) {
+  async openEntry(entry) {
+    this.focusedEntry = { path: entry.file.path, line: entry.line };
+    await this.openFile(entry.file, entry.line);
+  }
+  async openFile(file, line) {
     var _a;
     const markdownLeaf = (_a = this.app.workspace.getLeavesOfType("markdown")[0]) != null ? _a : this.app.workspace.getLeaf("tab");
     await markdownLeaf.openFile(file);
     this.app.workspace.setActiveLeaf(markdownLeaf, { focus: true });
+    this.updateEditorDates();
+    if (line !== void 0 && markdownLeaf.view instanceof import_obsidian.MarkdownView) {
+      const view = markdownLeaf.view;
+      window.setTimeout(() => this.focusEditorLine(view, line), 100);
+    }
   }
-  async appendCapture(text) {
-    const file = await this.ensureDailyNote((0, import_moment.default)());
+  focusEditorLine(view, line) {
+    const target = { line: Math.min(line + 1, Math.max(0, view.editor.lineCount() - 1)), ch: 0 };
+    view.editor.setCursor(target);
+    view.editor.scrollIntoView({ from: target, to: target }, true);
+  }
+  async appendCapture(text, date = (0, import_moment.default)()) {
+    const file = await this.ensureDailyNote(date);
     await this.app.vault.process(file, (current) => {
       const base = current.trimEnd();
       return `${base}
 
-### ${(0, import_moment.default)().format("h:mm A")}
+### ${date.format("h:mm A")}
 
 ${text}
 `;
     });
-    await this.openFile(file);
-    new import_obsidian.Notice("Saved to today\u2019s journal");
+    const entries = await this.entriesForFile(file);
+    const latest = entries[entries.length - 1];
+    if (latest) await this.openEntry(latest);
+    else await this.openFile(file);
+    new import_obsidian.Notice(date.isSame((0, import_moment.default)(), "day") ? "Saved to today\u2019s journal" : `Saved to ${date.format("MMMM D")}`);
   }
 };
 /*! Bundled license information:

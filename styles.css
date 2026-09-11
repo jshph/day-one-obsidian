@@ -619,6 +619,62 @@ body.day-one-vault .day-one-editor-meta-bar .location {
   text-overflow: ellipsis;
 }
 
+body.day-one-vault .day-one-entry-jumpbar {
+  position: absolute;
+  z-index: 9;
+  top: 32px;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 5px 14px;
+  overflow-x: auto;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--background-primary) 95%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--divider-color) 60%, transparent);
+  font: 12px/1 "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  scrollbar-width: none;
+  white-space: nowrap;
+  backdrop-filter: blur(14px);
+}
+
+body.day-one-vault .day-one-entry-jumpbar::-webkit-scrollbar {
+  display: none;
+}
+
+body.day-one-vault .day-one-entry-jumpbar-label {
+  margin-right: 2px;
+  font-weight: 650;
+}
+
+body.day-one-vault .day-one-entry-jump {
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  font: inherit;
+}
+
+body.day-one-vault .day-one-entry-jump.is-active {
+  color: white;
+  background: var(--day-one-blue);
+}
+
+body.day-one-vault .day-one-entry-jump.add {
+  color: var(--day-one-blue);
+  background: color-mix(in srgb, var(--day-one-blue) 10%, transparent);
+  font-weight: 650;
+}
+
+body.day-one-vault .has-multiple-day-one-entries .markdown-source-view.mod-cm6 .cm-content,
+body.day-one-vault .has-multiple-day-one-entries .markdown-preview-view {
+  padding-top: 55px;
+}
+
 /* Day One calendar: one weekday rail, compact months, and explicit states. */
 body.day-one-vault .day-one-browser-scroll.mode-calendar {
   padding: 0;
@@ -683,7 +739,24 @@ body.day-one-vault .mode-calendar .day-one-calendar-grid .is-blank {
 }
 
 body.day-one-vault .mode-calendar .day-one-calendar-day {
+  position: relative;
   transition: background-color 90ms ease, color 90ms ease, box-shadow 90ms ease, transform 90ms ease;
+}
+
+body.day-one-vault .day-one-calendar-count {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  border-radius: 999px;
+  color: white;
+  background: rgba(0, 0, 0, .28);
+  font-size: 8px;
+  line-height: 12px;
+  font-weight: 750;
+  text-align: center;
 }
 
 body.day-one-vault .mode-calendar .day-one-calendar-day:hover {
@@ -1075,6 +1148,18 @@ body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
     white-space: nowrap;
   }
 
+  body.day-one-vault .day-one-entry-jumpbar {
+    top: calc(46px + env(safe-area-inset-top));
+    min-height: 48px;
+    padding: 7px 12px;
+  }
+
+  body.day-one-vault .day-one-entry-jump {
+    min-height: 34px;
+    padding-inline: 12px;
+    touch-action: manipulation;
+  }
+
   body.day-one-vault .markdown-source-view.mod-cm6 .cm-sizer {
     width: 100% !important;
     max-width: none !important;
@@ -1093,6 +1178,11 @@ body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
   body.day-one-vault .markdown-preview-view {
     font-size: 17px;
     line-height: 1.55;
+  }
+
+  body.day-one-vault .has-multiple-day-one-entries .markdown-source-view.mod-cm6 .cm-content,
+  body.day-one-vault .has-multiple-day-one-entries .markdown-preview-view {
+    padding-top: 76px;
   }
 
   body.day-one-vault .day-one-entry-title-line,

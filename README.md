@@ -27,6 +27,7 @@ Backups and reports are written beneath `~/.dayone-to-obsidian/backups/`.
 - Press `Cmd/Ctrl+Shift+J` for Quick Capture.
 - Use the list, photos, map, or calendar to browse.
 - Click an existing calendar date to open it; click an empty date to create it.
+- Multiple moments on one day stay as separate timeline cards. Calendar dates show an entry count, and the daily note gains a time switcher that jumps directly between entries or adds another one.
 - The first image in a note becomes its calendar thumbnail.
 - New notes never require title, tags, mood, weather, or location metadata.
 - On phones and small tablets, the same plugin becomes a touch-first layout with top view controls, bottom journal navigation, full-width editing, and safe-area-aware capture.
