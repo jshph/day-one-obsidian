@@ -1,0 +1,17 @@
+{
+  "name": "day-one-obsidian-shell",
+  "version": "0.1.0",
+  "description": "An agent-guided Day One importer and familiar Obsidian journaling experience.",
+  "license": "MIT",
+  "repository": "github:jshph/day-one-obsidian",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "latest",
+    "typescript": "^5.9.0"
+  }
+}

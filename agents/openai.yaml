@@ -1,0 +1,5 @@
+interface:
+  display_name: "Day One to Obsidian"
+  short_description: "Migrate Day One into a familiar Obsidian journal"
+  brand_color: "#42B8F5"
+  default_prompt: "Use $dayone-to-obsidian to import my Day One journal into a new Obsidian vault and make it feel familiar."

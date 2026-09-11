@@ -1,0 +1,747 @@
+/* Day One Shell — scoped to the dedicated journal vault. */
+body.day-one-vault {
+  --day-one-blue: #42b8f5;
+  --day-one-ink: #252b2f;
+  --day-one-muted: #969ca0;
+  --day-one-line: #e6e8ea;
+  --day-one-rail: #f7f8f9;
+  --interactive-accent: var(--day-one-blue);
+  --font-interface: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+body.day-one-vault .workspace-ribbon.mod-left,
+body.day-one-vault .status-bar,
+body.day-one-vault .workspace-split.mod-root > .workspace-tabs > .workspace-tab-header-container,
+body.day-one-vault .workspace-leaf-content[data-type="day-one-shell-view"] > .view-header {
+  display: none;
+}
+
+body.day-one-vault .workspace-split.mod-left-split > .workspace-tabs > .workspace-tab-header-container,
+body.day-one-vault .workspace-sidedock-vault-profile {
+  display: none !important;
+}
+
+body.day-one-vault .workspace-split.mod-left-split:has(.day-one-shell) {
+  width: min(48vw, 820px) !important;
+  flex: 0 0 min(50vw, 820px) !important;
+  min-width: 680px;
+  border-right: 1px solid var(--day-one-line);
+}
+
+body.day-one-vault .workspace-leaf-content[data-type="day-one-shell-view"],
+body.day-one-vault .day-one-shell,
+body.day-one-vault .day-one-shell-grid {
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.day-one-shell-grid {
+  display: grid;
+  grid-template-columns: 286px minmax(390px, 1fr);
+  color: var(--day-one-ink);
+  background: white;
+}
+
+.day-one-journal-rail {
+  position: relative;
+  padding: 82px 18px 24px;
+  overflow: hidden;
+  background: linear-gradient(105deg, #f9fafb, #f4f6f7);
+  border-right: 1px solid var(--day-one-line);
+}
+
+.day-one-window-dots { display: none; }
+.day-one-window-dots span { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,.16); }
+.day-one-window-dots .red { background: #ff5f57; }
+.day-one-window-dots .yellow { background: #febc2e; }
+.day-one-window-dots .green { background: #28c840; }
+
+.day-one-icon-button,
+.day-one-rail-button,
+.day-one-journal-row,
+.day-one-entry-row,
+.day-one-calendar-day,
+.day-one-photo-card,
+.day-one-location-row {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.day-one-compose { position: absolute; top: 16px; right: 20px; width: 35px !important; height: 35px !important; }
+.day-one-icon-button { display: grid; place-items: center; width: 38px; height: 36px; padding: 0; border-radius: 11px; background: transparent; color: #62686c; cursor: pointer; }
+.day-one-icon-button:hover, .day-one-icon-button.is-active { color: #30363a; background: rgba(43,50,54,.08); }
+.day-one-icon-button svg { width: 21px; height: 21px; stroke-width: 2; }
+
+.day-one-rail-nav, .day-one-rail-lower { display: flex; flex-direction: column; gap: 3px; }
+.day-one-rail-button { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; width: 100%; min-height: 42px; padding: 4px 10px; text-align: left; background: transparent !important; box-shadow: none !important; border-radius: 11px; cursor: pointer; }
+.day-one-rail-button:hover, .day-one-rail-button.is-active { background: rgba(37,43,47,.075) !important; }
+.day-one-rail-icon { display: grid; place-items: center; color: #7e8589; }
+.day-one-rail-icon svg { width: 21px; height: 21px; stroke-width: 2; }
+.day-one-rail-label { font-size: 16px; font-weight: 500; }
+.day-one-rail-trailing { color: #949a9e; font-size: 14px; }
+.day-one-rail-divider { height: 1px; margin: 16px 14px; background: #dfe2e4; }
+.day-one-journals-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 9px; color: #71777b; font-size: 15px; font-weight: 700; }
+.day-one-journals-heading button { border: 0; background: none; color: var(--day-one-blue); font-size: 15px; font-weight: 700; }
+.day-one-journal-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; width: 100%; min-height: 46px; padding: 5px 12px; background: rgba(37,43,47,.11) !important; box-shadow: none !important; border-radius: 12px; text-align: left; cursor: pointer; }
+.day-one-book { width: 14px; height: 25px; border-radius: 3px; background: linear-gradient(90deg, #198de1 0 25%, #42b8f5 25%); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+.day-one-journal-label { font-size: 16px; font-weight: 500; }
+.day-one-journal-count { color: #9ba0a4; font-size: 14px; }
+
+.day-one-browser { display: grid; grid-template-rows: 67px 1fr; min-width: 0; background: #fff; }
+.day-one-browser-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid #eef0f1; background: rgba(255,255,255,.96); }
+.day-one-mode-switcher, .day-one-browser-tools { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 17px; background: rgba(255,255,255,.94); box-shadow: 0 5px 22px rgba(30,37,41,.10); }
+.day-one-mode-switcher .day-one-icon-button { border-left: 1px solid transparent; }
+.day-one-search-wrap { display: flex; align-items: center; width: 38px; height: 36px; padding: 0 9px; overflow: hidden; border-radius: 11px; transition: width .16s ease; }
+.day-one-search-wrap:focus-within { width: 145px; background: #f2f3f4; }
+.day-one-search-wrap svg { width: 20px; color: #63696d; }
+.day-one-search-wrap input { width: 100%; min-width: 0; border: 0; background: transparent; box-shadow: none; font-size: 13px; }
+.day-one-search-wrap:not(:focus-within) input { opacity: 0; }
+.day-one-browser-scroll { overflow-y: auto; scrollbar-width: thin; background: white; }
+
+.day-one-month-heading { margin: 0; padding: 18px 24px 12px; border-bottom: 1px solid var(--day-one-line); color: #343a3e; font-size: 25px; line-height: 1.2; font-weight: 760; letter-spacing: -.45px; }
+.day-one-entry-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; width: 100%; min-height: 112px; padding: 14px 22px 14px 18px; border-bottom: 1px solid #eceeef; background: #fff; text-align: left; cursor: pointer; }
+.day-one-entry-row:hover { background: #f7f9fa; }
+.day-one-entry-row.is-selected { color: white; background: var(--day-one-blue); }
+.day-one-date-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 80px; border: 1px solid #dfe2e4; border-radius: 13px; background: #fff; color: #50565a; }
+.day-one-date-badge .weekday { font-size: 12px; font-weight: 750; }
+.day-one-date-badge .day { margin-top: 1px; font-size: 34px; line-height: 1; font-weight: 500; letter-spacing: -1px; }
+.day-one-entry-copy { min-width: 0; }
+.day-one-entry-title { overflow: hidden; color: inherit; font-size: 17px; line-height: 1.25; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.day-one-entry-preview { display: -webkit-box; margin-top: 4px; overflow: hidden; color: inherit; font-size: 15px; line-height: 1.35; font-weight: 450; opacity: .96; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.day-one-entry-meta { margin-top: 7px; color: var(--day-one-muted); font-size: 11.5px; font-weight: 500; }
+.day-one-entry-row.is-selected .day-one-entry-meta { color: rgba(255,255,255,.65); }
+.day-one-entry-thumb { width: 68px; height: 68px; margin-left: 12px; object-fit: cover; border-radius: 8px; }
+
+.day-one-weekdays, .day-one-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; padding-inline: 18px; }
+.day-one-weekdays { padding-top: 14px; padding-bottom: 8px; color: #51585c; text-align: center; font-size: 13px; font-weight: 550; }
+.day-one-calendar-grid { padding-bottom: 28px; }
+.day-one-calendar-day, .day-one-calendar-grid .is-blank { aspect-ratio: 1.25; min-height: 47px; border-radius: 9px; background-color: transparent !important; box-shadow: none !important; font-size: 17px; font-weight: 600; cursor: pointer; }
+.day-one-calendar-day:hover { background-color: #edf0f2 !important; }
+.day-one-calendar-day.has-entry { color: white; background-color: var(--day-one-blue) !important; }
+.day-one-calendar-day.is-today { box-shadow: inset 0 0 0 2px var(--day-one-blue); }
+.day-one-calendar-day.has-photo { background-position: center; background-size: cover; text-shadow: 0 1px 4px rgba(0,0,0,.75); box-shadow: inset 0 0 0 100px rgba(0,0,0,.12); }
+
+.day-one-photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 14px; }
+.day-one-photo-card { position: relative; min-height: 175px; overflow: hidden; border-radius: 10px; background-color: #e8ecee; background-position: center; background-size: cover; cursor: pointer; }
+.day-one-photo-card span { position: absolute; inset: auto 0 0; padding: 30px 11px 10px; overflow: hidden; color: white; background: linear-gradient(transparent, rgba(0,0,0,.66)); text-align: left; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.day-one-map-empty, .day-one-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 55vh; padding: 40px; color: #8b9195; text-align: center; }
+.day-one-map-empty svg { width: 46px; height: 46px; color: var(--day-one-blue); stroke-width: 1.5; }
+.day-one-map-empty h3 { margin: 17px 0 5px; color: #3e4549; font-size: 19px; }
+.day-one-map-empty p { max-width: 300px; margin: 0; line-height: 1.5; }
+.day-one-location-row { display: flex; gap: 13px; width: calc(100% - 32px); margin: 8px 16px; padding: 15px; border: 1px solid var(--day-one-line); border-radius: 11px; background: white; text-align: left; cursor: pointer; }
+.day-one-location-row > span:last-child { display: flex; flex-direction: column; gap: 4px; }
+.day-one-location-row small { color: var(--day-one-muted); }
+
+body.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header { height: 55px; border-bottom: 0; background: #fff; }
+body.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header-title-container { visibility: hidden; }
+body.day-one-vault .day-one-editor-date { position: absolute; left: 72px; top: 19px; color: #b0b4b7; font-size: 13px; font-weight: 500; }
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-content,
+body.day-one-vault .markdown-preview-view { max-width: 790px; padding-top: clamp(46px, 8vh, 100px); padding-inline: clamp(45px, 9vw, 150px); }
+body.day-one-vault .inline-title { display: none; }
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-line,
+body.day-one-vault .markdown-preview-view { font-size: 18px; line-height: 1.6; }
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-line:has(.cm-comment) { display: none; }
+body.day-one-vault .markdown-source-view.mod-cm6 .HyperMD-header-2,
+body.day-one-vault .markdown-preview-view h2 { margin-top: 1.5em; font-size: 15px; color: #8d9397; text-transform: uppercase; letter-spacing: .13em; }
+
+.day-one-capture-modal { max-width: 610px; border: 0; border-radius: 18px; box-shadow: 0 24px 80px rgba(22,28,32,.24); }
+.day-one-capture-modal .modal-title { font-size: 23px; }
+.day-one-capture-hint { margin: 5px 0 15px; color: var(--text-muted); font-size: 13px; }
+.day-one-capture-modal textarea { width: 100%; padding: 15px; resize: vertical; border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-primary); font: 17px/1.55 var(--font-text); }
+.day-one-capture-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+@media (max-width: 1200px) {
+  body.day-one-vault .workspace-split.mod-left-split:has(.day-one-shell) { width: 610px !important; min-width: 610px; flex-basis: 610px !important; }
+  .day-one-shell-grid { grid-template-columns: 245px minmax(360px, 1fr); }
+  .day-one-journal-rail { padding-inline: 12px; }
+}
+
+/* Dense desktop proportions, measured against the live Day One window. */
+body.day-one-vault .workspace-split.mod-left-split:has(.day-one-shell) {
+  width: 338px !important;
+  min-width: 338px !important;
+  max-width: 338px !important;
+  flex: 0 0 338px !important;
+}
+
+body.day-one-vault .day-one-shell-grid {
+  grid-template-columns: 135px 203px;
+}
+
+body.day-one-vault .day-one-journal-rail {
+  padding: 34px 20px 14px;
+}
+
+body.day-one-vault .day-one-compose {
+  top: 5px;
+  right: auto;
+  left: 93px;
+  width: 25px !important;
+  height: 25px !important;
+}
+
+body.day-one-vault .day-one-icon-button {
+  width: 27px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+body.day-one-vault .day-one-icon-button svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+
+body.day-one-vault .day-one-rail-nav,
+body.day-one-vault .day-one-rail-lower {
+  gap: 0;
+}
+
+body.day-one-vault .day-one-rail-button {
+  grid-template-columns: 19px 1fr auto;
+  min-height: 28px;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+
+body.day-one-vault .day-one-rail-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+body.day-one-vault .day-one-rail-label,
+body.day-one-vault .day-one-rail-trailing {
+  font-size: 10.5px;
+  font-weight: 550;
+}
+
+body.day-one-vault .day-one-rail-divider {
+  margin: 10px 5px;
+}
+
+body.day-one-vault .day-one-journals-heading {
+  padding: 0 5px 5px;
+  font-size: 10px;
+}
+
+body.day-one-vault .day-one-journals-heading button {
+  padding: 0;
+  font-size: 10px;
+}
+
+body.day-one-vault .day-one-journal-row {
+  grid-template-columns: 19px 1fr auto;
+  min-height: 30px;
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+
+body.day-one-vault .day-one-book {
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+body.day-one-vault .day-one-journal-label,
+body.day-one-vault .day-one-journal-count {
+  font-size: 10.5px;
+}
+
+body.day-one-vault .day-one-browser {
+  grid-template-rows: 35px 1fr;
+}
+
+body.day-one-vault .day-one-browser-toolbar {
+  padding: 4px 7px;
+}
+
+body.day-one-vault .day-one-mode-switcher,
+body.day-one-vault .day-one-browser-tools {
+  gap: 1px;
+  padding: 1px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+body.day-one-vault .day-one-search-wrap {
+  width: 27px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
+}
+
+body.day-one-vault .day-one-search-wrap svg {
+  width: 14px;
+}
+
+body.day-one-vault .day-one-month-heading {
+  padding: 7px 9px 5px;
+  font-size: 13px;
+  letter-spacing: -.15px;
+}
+
+body.day-one-vault .day-one-entry-row {
+  grid-template-columns: 40px 1fr auto;
+  min-height: 57px;
+  padding: 6px 7px;
+  background: var(--background-primary) !important;
+  box-shadow: none !important;
+}
+
+body.day-one-vault .day-one-date-badge {
+  width: 34px;
+  height: 44px;
+  border-radius: 7px;
+}
+
+body.day-one-vault .day-one-date-badge .weekday {
+  font-size: 7px;
+}
+
+body.day-one-vault .day-one-date-badge .day {
+  font-size: 22px;
+}
+
+body.day-one-vault .day-one-entry-title {
+  font-size: 10.5px;
+  line-height: 1.18;
+}
+
+body.day-one-vault .day-one-entry-preview {
+  margin-top: 2px;
+  font-size: 9.5px;
+  line-height: 1.18;
+  -webkit-line-clamp: 2;
+}
+
+body.day-one-vault .day-one-entry-meta {
+  margin-top: 3px;
+  font-size: 7.5px;
+}
+
+body.day-one-vault .day-one-entry-thumb {
+  width: 42px;
+  height: 42px;
+  margin-left: 5px;
+  border-radius: 5px;
+}
+
+body.day-one-vault .day-one-entry-row.is-selected {
+  color: white;
+  background: var(--day-one-blue) !important;
+}
+
+body.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header {
+  height: 32px;
+  min-height: 32px;
+}
+
+body.day-one-vault .day-one-editor-date {
+  top: 10px;
+  left: 20px;
+  font-size: 9px;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-sizer {
+  max-width: 450px;
+  margin-inline: auto;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-content,
+body.day-one-vault .markdown-preview-view {
+  max-width: 450px;
+  padding: 4px 0 80px;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-line,
+body.day-one-vault .markdown-preview-view {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .HyperMD-header-2,
+body.day-one-vault .markdown-preview-view h2 {
+  margin-top: 0;
+  font-size: 9px;
+}
+
+body.theme-dark.day-one-vault {
+  --day-one-ink: #eeeeee;
+  --day-one-muted: #8f8f8f;
+  --day-one-line: #3a3a3a;
+  --day-one-rail: #292929;
+  --background-primary: #272727;
+  --background-secondary: #292929;
+  --background-secondary-alt: #303030;
+  --background-modifier-hover: #353535;
+  --divider-color: #3a3a3a;
+}
+
+body.theme-dark.day-one-vault .day-one-journal-rail {
+  background: #292929;
+  border-right-color: #3a3a3a;
+}
+
+body.theme-dark.day-one-vault .day-one-browser,
+body.theme-dark.day-one-vault .day-one-browser-scroll,
+body.theme-dark.day-one-vault .day-one-browser-toolbar,
+body.theme-dark.day-one-vault .workspace-leaf-content[data-type="markdown"] .view-header {
+  background: #272727;
+}
+
+body.theme-dark.day-one-vault .day-one-journal-row {
+  background: #3c3c3c !important;
+}
+
+body.theme-dark.day-one-vault .day-one-date-badge {
+  color: #dedede;
+  background: #202020;
+  border-color: #303030;
+}
+
+body.theme-dark.day-one-vault .day-one-entry-row.is-selected {
+  background: #444444 !important;
+}
+
+body.theme-dark.day-one-vault .day-one-entry-row {
+  border-bottom-color: #383838 !important;
+}
+
+body.theme-dark.day-one-vault .day-one-mode-switcher,
+body.theme-dark.day-one-vault .day-one-browser-tools {
+  background: #202020;
+}
+
+body.theme-dark.day-one-vault .day-one-month-heading {
+  color: #dddddd;
+}
+
+/* Obsidian is currently at ~68% UI zoom; compensate to match Day One physically. */
+body.day-one-vault .workspace-split.mod-left-split:has(.day-one-shell) {
+  width: 496px !important;
+  min-width: 496px !important;
+  max-width: 496px !important;
+  flex: 0 0 496px !important;
+}
+
+body.day-one-vault .day-one-shell-grid {
+  grid-template-columns: 198px 298px;
+}
+
+body.day-one-vault .day-one-rail-button {
+  grid-template-columns: 25px 1fr auto;
+}
+
+body.day-one-vault .day-one-rail-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.day-one-vault .day-one-rail-label,
+body.day-one-vault .day-one-rail-trailing,
+body.day-one-vault .day-one-journal-label,
+body.day-one-vault .day-one-journal-count {
+  font-size: 14px;
+}
+
+body.day-one-vault .day-one-journals-heading,
+body.day-one-vault .day-one-journals-heading button {
+  font-size: 13px;
+}
+
+body.day-one-vault .day-one-journal-row {
+  grid-template-columns: 25px 1fr auto;
+  min-height: 34px;
+}
+
+body.day-one-vault .day-one-book {
+  width: 11px;
+  height: 22px;
+}
+
+body.day-one-vault .day-one-browser {
+  grid-template-rows: 51px 1fr;
+}
+
+body.day-one-vault .day-one-icon-button {
+  width: 39px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+body.day-one-vault .day-one-icon-button svg {
+  width: 21px;
+  height: 21px;
+}
+
+body.day-one-vault .day-one-search-wrap {
+  width: 39px;
+  height: 38px;
+}
+
+body.day-one-vault .day-one-search-wrap svg {
+  width: 20px;
+}
+
+body.day-one-vault .day-one-month-heading {
+  padding: 10px 13px 8px;
+  font-size: 19px;
+}
+
+body.day-one-vault .day-one-entry-row {
+  grid-template-columns: 58px 1fr auto;
+  min-height: 84px;
+  padding: 9px 10px;
+  border-radius: 0 !important;
+}
+
+body.day-one-vault .day-one-date-badge {
+  width: 50px;
+  height: 65px;
+  border-radius: 10px;
+}
+
+body.day-one-vault .day-one-date-badge .weekday {
+  font-size: 10px;
+}
+
+body.day-one-vault .day-one-date-badge .day {
+  font-size: 32px;
+}
+
+body.day-one-vault .day-one-entry-title {
+  font-size: 15.5px;
+}
+
+body.day-one-vault .day-one-entry-preview {
+  font-size: 14px;
+}
+
+body.day-one-vault .day-one-entry-meta {
+  font-size: 11px;
+}
+
+body.day-one-vault .day-one-entry-thumb {
+  width: 62px;
+  height: 62px;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-sizer {
+  width: 700px !important;
+  min-width: 0 !important;
+  max-width: 700px !important;
+  margin-inline: auto !important;
+  transform: translateX(-15px);
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-content,
+body.day-one-vault .markdown-preview-view {
+  max-width: 700px;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .cm-line,
+body.day-one-vault .markdown-preview-view {
+  font-size: 16px;
+  line-height: 1.45;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.day-one-vault .markdown-source-view.mod-cm6 .HyperMD-header-2,
+body.day-one-vault .markdown-preview-view h2 {
+  font-size: 12px;
+}
+
+body.day-one-vault .day-one-shell {
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.day-one-vault .day-one-scaffold-line {
+  display: none !important;
+}
+
+body.day-one-vault .day-one-entry-title-line {
+  margin-bottom: 0;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+}
+
+body.day-one-vault .has-day-one-import .cm-content > .cm-line:nth-child(-n+7) {
+  display: none !important;
+}
+
+body.day-one-vault .has-day-one-import .cm-content > .cm-line:nth-child(8) {
+  margin-bottom: 0;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+}
+
+body.day-one-vault .workspace-leaf-content[data-type="markdown"] {
+  position: relative;
+}
+
+body.day-one-vault .day-one-editor-meta-bar {
+  position: absolute;
+  z-index: 8;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 35px;
+  padding: 0 14px;
+  overflow: hidden;
+  color: #adb1b4;
+  background: color-mix(in srgb, var(--background-primary) 94%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--divider-color) 55%, transparent);
+  font: 13px/1 "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+}
+
+body.day-one-vault .day-one-editor-meta-bar .journal {
+  color: #42b8f5;
+}
+
+body.day-one-vault .day-one-editor-meta-bar .location {
+  overflow: hidden;
+  color: #b7bbbe;
+  text-overflow: ellipsis;
+}
+
+/* Day One calendar: one weekday rail, compact months, and explicit states. */
+body.day-one-vault .day-one-browser-scroll.mode-calendar {
+  padding: 0;
+  scroll-behavior: smooth;
+}
+
+body.day-one-vault .mode-calendar > .day-one-weekdays,
+body.day-one-vault .mode-calendar .day-one-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  padding-inline: 13px;
+}
+
+body.day-one-vault .mode-calendar > .day-one-weekdays {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  padding-top: 7px;
+  padding-bottom: 5px;
+  color: #a5a9ac;
+  background: var(--background-primary);
+  border-bottom: 1px solid #343434;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-month {
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--divider-color);
+}
+
+body.day-one-vault .mode-calendar .day-one-month-heading {
+  padding: 6px 13px 5px;
+  border: 0;
+  font-size: 19px;
+  line-height: 1.15;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-grid {
+  padding-top: 2px;
+  padding-bottom: 13px;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day,
+body.day-one-vault .mode-calendar .day-one-calendar-grid .is-blank {
+  width: auto;
+  min-width: 0;
+  height: 25px;
+  min-height: 0;
+  aspect-ratio: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  line-height: 25px;
+  font-weight: 570;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day {
+  transition: background-color 90ms ease, color 90ms ease, box-shadow 90ms ease, transform 90ms ease;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day:hover {
+  background-color: var(--background-modifier-hover) !important;
+  transform: translateY(-1px);
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day:active {
+  transform: translateY(0) scale(.94);
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day:focus-visible {
+  outline: 2px solid #42b8f5;
+  outline-offset: 1px;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
+  color: white;
+  background-color: #42b8f5 !important;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day.has-entry:hover {
+  background-color: #60c4f7 !important;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day.is-today:not(.has-entry) {
+  color: #42b8f5;
+  box-shadow: inset 0 0 0 1.5px #42b8f5 !important;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day.is-selected {
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .9) !important;
+}
+
+body.day-one-vault .mode-calendar .day-one-calendar-day.has-photo {
+  background-position: center;
+  background-size: cover;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
+}
+
+body.theme-dark.day-one-vault .mode-calendar > .day-one-weekdays,
+body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-month {
+  background: #202020;
+}
+
+body.theme-dark.day-one-vault .mode-calendar .day-one-month-heading {
+  background: #292929;
+}
+
+body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day {
+  color: #e4e4e4;
+}
+
+body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day:hover {
+  background-color: #353535 !important;
+}
+
+body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
+  color: white;
+  background-color: #42b8f5 !important;
+}

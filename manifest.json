@@ -1,0 +1,10 @@
+{
+  "id": "day-one-shell",
+  "name": "Day One Shell",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.0",
+  "description": "A familiar Day One-style journal browser, calendar, and quick capture flow.",
+  "author": "Joshua Pham",
+  "authorUrl": "https://github.com/jshph",
+  "isDesktopOnly": false
+}
