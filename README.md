@@ -1,6 +1,6 @@
 # Day One to Obsidian
 
-Import a Day One journal into a dedicated Obsidian vault, then make Obsidian feel familiar: journal rail, entry list, photo browser, location history, interactive calendar, clean reading layout, and quick capture.
+Import a Day One journal into a dedicated Obsidian vault, then make Obsidian feel familiar: journal rail, entry list, photo browser, location history, interactive calendar, clean reading layout, quick capture, and an `Aa` rich-text toolbar.
 
 Your journal remains ordinary local Markdown. Imported metadata is preserved, but new entries require no forms or frontmatter—just write.
 
@@ -25,6 +25,7 @@ Backups and reports are written beneath `~/.dayone-to-obsidian/backups/`.
 
 - Open **Today** and write.
 - Press `Cmd/Ctrl+Shift+J` for Quick Capture.
+- Tap or click **Aa** while writing for Day One-style formatting. The same horizontally scrolling controls appear in Quick Capture on mobile.
 - Use the list, photos, map, or calendar to browse.
 - Click an existing calendar date to open it; click an empty date to create it.
 - Multiple moments on one day stay as separate timeline cards. Calendar dates show an entry count, and the daily note gains a time switcher that jumps directly between entries or adds another one.
@@ -33,6 +34,8 @@ Backups and reports are written beneath `~/.dayone-to-obsidian/backups/`.
 - On phones and small tablets, the same plugin becomes a touch-first layout with top view controls, bottom journal navigation, full-width editing, and safe-area-aware capture.
 
 The responsive layout follows Day One's current mobile model: [List, Calendar, Media, and Map views](https://dayoneapp.com/guides/tips-and-tutorials/journal-views-in-day-one-for-ios/) remain one tap away, and [calendar dates open the selected day](https://dayoneapp.com/guides/tips-and-tutorials/calendar-view-in-day-one/).
+
+Formatting follows Day One's current editor model: the unobtrusive **Aa** button opens headers, bold, italic, highlight, strikethrough, underline, link, code, quote, lists, checklist, rule, indent, outdent, and clear-formatting controls. The plugin writes portable Markdown whenever Markdown supports the style; underline uses the portable HTML `<u>` element because standard Markdown has no underline syntax.
 
 Remote-only attachment records, encrypted placeholders, and unsupported rich text are reported rather than silently invented or discarded.
 

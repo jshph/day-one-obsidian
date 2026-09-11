@@ -3972,9 +3972,74 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 var import_moment = __toESM(require_moment());
+
+// src/formatting.ts
+function transformText(value, start, end, id) {
+  const selected = value.slice(start, end);
+  if (!selected && ["clear", "indent", "outdent"].includes(id)) return { value, cursor: start };
+  const placeholder = selected || (id === "link" ? "link text" : id === "codeblock" ? "code" : id.startsWith("h") ? "Heading" : "text");
+  const replace = (text, cursor = start + text.length) => ({ value: value.slice(0, start) + text + value.slice(end), cursor });
+  const wrap = (before, after) => replace(`${before}${placeholder}${after}`, start + before.length + placeholder.length);
+  if (id === "bold") return wrap("**", "**");
+  if (id === "italic") return wrap("_", "_");
+  if (id === "highlight") return wrap("==", "==");
+  if (id === "strike") return wrap("~~", "~~");
+  if (id === "underline") return wrap("<u>", "</u>");
+  if (id === "code") return wrap("`", "`");
+  if (id === "link") return replace(`[${placeholder}](https://)`, start + placeholder.length + 11);
+  if (id === "codeblock") return replace(`\`\`\`
+${placeholder}
+\`\`\``, start + placeholder.length + 5);
+  if (id === "rule") return replace(`${selected ? `${selected}
+
+` : ""}---
+`, start + (selected ? selected.length + 5 : 4));
+  if (id === "clear") {
+    const cleared = placeholder.replace(/<\/?u>/gi, "").replace(/^(#{1,6}|>|- \[[ xX]\]|[-*]|\d+\.)\s+/gm, "").replace(/(\*\*|__|~~|==|`)/g, "").replace(/(^|[^*])\*([^*]|$)/g, "$1$2").replace(/(^|[^_])_([^_]|$)/g, "$1$2");
+    return replace(cleared);
+  }
+  const lines = placeholder.split("\n");
+  if (id === "indent") return replace(lines.map((line) => `  ${line}`).join("\n"));
+  if (id === "outdent") return replace(lines.map((line) => line.replace(/^(?:  |\t)/, "")).join("\n"));
+  const prefix = id === "quote" ? "> " : id === "bullet" ? "- " : id === "check" ? "- [ ] " : id.startsWith("h") ? `${"#".repeat(Number(id.slice(1)))} ` : "";
+  return replace(lines.map((line, index) => `${id === "number" ? `${index + 1}. ` : prefix}${line.replace(/^(?:#{1,6}|>|- \[[ xX]\]|[-*]|\d+\.)\s+/, "")}`).join("\n"));
+}
+
+// src/main.ts
 var VIEW_TYPE = "day-one-shell-view";
 var DAILY_FOLDER = "daily";
 var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var FORMAT_ACTIONS = [
+  { id: "clear", label: "Clear formatting", icon: "eraser" },
+  { id: "bold", label: "Bold", icon: "bold" },
+  { id: "italic", label: "Italic", icon: "italic" },
+  { id: "highlight", label: "Highlight", icon: "highlighter" },
+  { id: "strike", label: "Strikethrough", icon: "strikethrough" },
+  { id: "underline", label: "Underline", icon: "underline" },
+  { id: "link", label: "Link", icon: "link" },
+  { id: "code", label: "Code span", icon: "code" },
+  { id: "quote", label: "Quote block", icon: "quote" },
+  { id: "codeblock", label: "Code block", icon: "square-code" },
+  { id: "bullet", label: "Bulleted list", icon: "list" },
+  { id: "number", label: "Numbered list", icon: "list-ordered" },
+  { id: "check", label: "Checklist", icon: "list-checks" },
+  { id: "rule", label: "Rule line", icon: "minus" },
+  { id: "indent", label: "Indent", icon: "indent-increase" },
+  { id: "outdent", label: "Outdent", icon: "indent-decrease" },
+  ...[1, 2, 3, 4, 5, 6].map((level) => ({ id: `h${level}`, label: `Header ${level}`, short: `H${level}` }))
+];
+function renderFormatControls(parent, apply) {
+  for (const action of FORMAT_ACTIONS) {
+    const button = parent.createEl("button", {
+      cls: "day-one-format-action",
+      attr: { type: "button", title: action.label, "aria-label": action.label }
+    });
+    if (action.icon) (0, import_obsidian.setIcon)(button, action.icon);
+    else button.createSpan({ text: action.short });
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.onclick = () => apply(action.id);
+  }
+}
 function displayTimestamp(date) {
   var _a;
   const zone = (_a = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(date.toDate()).find((part) => part.type === "timeZoneName")) == null ? void 0 : _a.value;
@@ -4015,6 +4080,15 @@ var CaptureModal = class extends import_obsidian.Modal {
     this.titleEl.setText("New journal entry");
     const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: this.date.format("dddd, MMMM D \xB7 h:mm A") });
     const input = this.contentEl.createEl("textarea", { attr: { placeholder: "What\u2019s on your mind?", rows: "9" } });
+    const format = this.contentEl.createDiv({ cls: "day-one-capture-format", attr: { "aria-label": "Text formatting" } });
+    format.createSpan({ cls: "day-one-format-aa", text: "Aa" });
+    const formatScroll = format.createDiv({ cls: "day-one-capture-format-scroll" });
+    renderFormatControls(formatScroll, (id) => {
+      const transformed = transformText(input.value, input.selectionStart, input.selectionEnd, id);
+      input.value = transformed.value;
+      input.focus();
+      input.setSelectionRange(transformed.cursor, transformed.cursor);
+    });
     const actions = this.contentEl.createDiv({ cls: "day-one-capture-actions" });
     const cancel = actions.createEl("button", { text: "Cancel" });
     const save = actions.createEl("button", { cls: "mod-cta", text: "Save" });
@@ -4368,7 +4442,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
   }
   updateEditorDates() {
     window.setTimeout(() => {
-      var _a, _b;
+      var _a, _b, _c;
       for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
         const view = leaf.view;
         if (!(view instanceof import_obsidian.MarkdownView)) continue;
@@ -4384,6 +4458,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
           view.containerEl.removeClass("has-day-one-import", "has-multiple-day-one-entries");
           (_a = view.containerEl.querySelector(".day-one-editor-meta-bar")) == null ? void 0 : _a.remove();
           (_b = view.containerEl.querySelector(".day-one-entry-jumpbar")) == null ? void 0 : _b.remove();
+          (_c = view.containerEl.querySelector(".day-one-format-toolbar")) == null ? void 0 : _c.remove();
         }
       }
     }, 80);
@@ -4400,6 +4475,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     view.containerEl.toggleClass("has-multiple-day-one-entries", entries.length > 1);
     label.setText(focused ? displayTimestamp(focused.date) : entries.length > 1 ? `${(0, import_moment.default)(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} \xB7 ${entries.length} entries` : displayTimestamp((_b = (_a = entries[0]) == null ? void 0 : _a.date) != null ? _b : (0, import_moment.default)(file.basename, "YYYY-MM-DD")));
     label.show();
+    this.ensureFormatToolbar(view);
     let bar = view.containerEl.querySelector(".day-one-editor-meta-bar");
     if (!bar) bar = view.containerEl.createDiv({ cls: "day-one-editor-meta-bar" });
     bar.empty();
@@ -4457,6 +4533,48 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     decorateLines();
     window.setTimeout(decorateLines, 220);
     window.setTimeout(decorateLines, 700);
+  }
+  ensureFormatToolbar(view) {
+    let toolbar = view.containerEl.querySelector(".day-one-format-toolbar");
+    if (toolbar) return;
+    toolbar = view.containerEl.createDiv({ cls: "day-one-format-toolbar", attr: { "aria-label": "Text formatting" } });
+    const panel = toolbar.createDiv({ cls: "day-one-format-panel" });
+    renderFormatControls(panel, (id) => this.applyEditorFormat(view, id));
+    const trigger = toolbar.createEl("button", {
+      cls: "day-one-format-trigger",
+      text: "Aa",
+      attr: { type: "button", title: "Text formatting", "aria-label": "Text formatting", "aria-expanded": "false" }
+    });
+    trigger.addEventListener("mousedown", (event) => event.preventDefault());
+    trigger.onclick = () => {
+      const expanded = !(toolbar == null ? void 0 : toolbar.hasClass("is-expanded"));
+      toolbar == null ? void 0 : toolbar.toggleClass("is-expanded", expanded);
+      trigger.setAttr("aria-expanded", String(expanded));
+    };
+    this.registerDomEvent(document, "pointerdown", (event) => {
+      if (toolbar && !toolbar.contains(event.target)) {
+        toolbar.removeClass("is-expanded");
+        trigger.setAttr("aria-expanded", "false");
+      }
+    });
+  }
+  applyEditorFormat(view, id) {
+    const editor = view.editor;
+    let from = editor.getCursor("from");
+    let to = editor.getCursor("to");
+    let start = editor.posToOffset(from);
+    let end = editor.posToOffset(to);
+    if (start === end && (["clear", "quote", "bullet", "number", "check", "indent", "outdent"].includes(id) || id.startsWith("h"))) {
+      from = { line: from.line, ch: 0 };
+      to = { line: to.line, ch: editor.getLine(to.line).length };
+      start = editor.posToOffset(from);
+      end = editor.posToOffset(to);
+    }
+    const original = editor.getValue();
+    const transformed = transformText(original, start, end, id);
+    editor.replaceRange(transformed.value.slice(start, transformed.value.length - (original.length - end)), from, to);
+    editor.setCursor(editor.offsetToPos(transformed.cursor));
+    editor.focus();
   }
   async entriesForFile(file, providedRaw) {
     var _a;

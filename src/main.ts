@@ -12,12 +12,46 @@ import {
   setIcon,
 } from "obsidian";
 import moment, { Moment } from "moment";
+import { FormatId, transformText } from "./formatting";
 
 const VIEW_TYPE = "day-one-shell-view";
 const DAILY_FOLDER = "daily";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 type BrowserMode = "list" | "grid" | "map" | "calendar";
 type FilterMode = "all" | "today" | "on-this-day";
+
+const FORMAT_ACTIONS: Array<{ id: FormatId; label: string; icon?: string; short?: string }> = [
+  { id: "clear", label: "Clear formatting", icon: "eraser" },
+  { id: "bold", label: "Bold", icon: "bold" },
+  { id: "italic", label: "Italic", icon: "italic" },
+  { id: "highlight", label: "Highlight", icon: "highlighter" },
+  { id: "strike", label: "Strikethrough", icon: "strikethrough" },
+  { id: "underline", label: "Underline", icon: "underline" },
+  { id: "link", label: "Link", icon: "link" },
+  { id: "code", label: "Code span", icon: "code" },
+  { id: "quote", label: "Quote block", icon: "quote" },
+  { id: "codeblock", label: "Code block", icon: "square-code" },
+  { id: "bullet", label: "Bulleted list", icon: "list" },
+  { id: "number", label: "Numbered list", icon: "list-ordered" },
+  { id: "check", label: "Checklist", icon: "list-checks" },
+  { id: "rule", label: "Rule line", icon: "minus" },
+  { id: "indent", label: "Indent", icon: "indent-increase" },
+  { id: "outdent", label: "Outdent", icon: "indent-decrease" },
+  ...([1, 2, 3, 4, 5, 6] as const).map((level) => ({ id: `h${level}` as FormatId, label: `Header ${level}`, short: `H${level}` })),
+];
+
+function renderFormatControls(parent: HTMLElement, apply: (id: FormatId) => void): void {
+  for (const action of FORMAT_ACTIONS) {
+    const button = parent.createEl("button", {
+      cls: "day-one-format-action",
+      attr: { type: "button", title: action.label, "aria-label": action.label },
+    });
+    if (action.icon) setIcon(button, action.icon);
+    else button.createSpan({ text: action.short });
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.onclick = () => apply(action.id);
+  }
+}
 
 interface Entry {
   file: TFile;
@@ -82,6 +116,15 @@ class CaptureModal extends Modal {
     this.titleEl.setText("New journal entry");
     const hint = this.contentEl.createDiv({ cls: "day-one-capture-hint", text: this.date.format("dddd, MMMM D · h:mm A") });
     const input = this.contentEl.createEl("textarea", { attr: { placeholder: "What’s on your mind?", rows: "9" } });
+    const format = this.contentEl.createDiv({ cls: "day-one-capture-format", attr: { "aria-label": "Text formatting" } });
+    format.createSpan({ cls: "day-one-format-aa", text: "Aa" });
+    const formatScroll = format.createDiv({ cls: "day-one-capture-format-scroll" });
+    renderFormatControls(formatScroll, (id) => {
+      const transformed = transformText(input.value, input.selectionStart, input.selectionEnd, id);
+      input.value = transformed.value;
+      input.focus();
+      input.setSelectionRange(transformed.cursor, transformed.cursor);
+    });
     const actions = this.contentEl.createDiv({ cls: "day-one-capture-actions" });
     const cancel = actions.createEl("button", { text: "Cancel" });
     const save = actions.createEl("button", { cls: "mod-cta", text: "Save" });
@@ -446,6 +489,7 @@ export default class DayOneShellPlugin extends Plugin {
           view.containerEl.removeClass("has-day-one-import", "has-multiple-day-one-entries");
           view.containerEl.querySelector(".day-one-editor-meta-bar")?.remove();
           view.containerEl.querySelector(".day-one-entry-jumpbar")?.remove();
+          view.containerEl.querySelector(".day-one-format-toolbar")?.remove();
         }
       }
     }, 80);
@@ -463,6 +507,7 @@ export default class DayOneShellPlugin extends Plugin {
         ? `${moment(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} · ${entries.length} entries`
         : displayTimestamp(entries[0]?.date ?? moment(file.basename, "YYYY-MM-DD")));
     label.show();
+    this.ensureFormatToolbar(view);
 
     let bar = view.containerEl.querySelector<HTMLElement>(".day-one-editor-meta-bar");
     if (!bar) bar = view.containerEl.createDiv({ cls: "day-one-editor-meta-bar" });
@@ -522,6 +567,50 @@ export default class DayOneShellPlugin extends Plugin {
     decorateLines();
     window.setTimeout(decorateLines, 220);
     window.setTimeout(decorateLines, 700);
+  }
+
+  private ensureFormatToolbar(view: MarkdownView): void {
+    let toolbar = view.containerEl.querySelector<HTMLElement>(".day-one-format-toolbar");
+    if (toolbar) return;
+    toolbar = view.containerEl.createDiv({ cls: "day-one-format-toolbar", attr: { "aria-label": "Text formatting" } });
+    const panel = toolbar.createDiv({ cls: "day-one-format-panel" });
+    renderFormatControls(panel, (id) => this.applyEditorFormat(view, id));
+    const trigger = toolbar.createEl("button", {
+      cls: "day-one-format-trigger",
+      text: "Aa",
+      attr: { type: "button", title: "Text formatting", "aria-label": "Text formatting", "aria-expanded": "false" },
+    });
+    trigger.addEventListener("mousedown", (event) => event.preventDefault());
+    trigger.onclick = () => {
+      const expanded = !toolbar?.hasClass("is-expanded");
+      toolbar?.toggleClass("is-expanded", expanded);
+      trigger.setAttr("aria-expanded", String(expanded));
+    };
+    this.registerDomEvent(document, "pointerdown", (event) => {
+      if (toolbar && !toolbar.contains(event.target as Node)) {
+        toolbar.removeClass("is-expanded");
+        trigger.setAttr("aria-expanded", "false");
+      }
+    });
+  }
+
+  private applyEditorFormat(view: MarkdownView, id: FormatId): void {
+    const editor = view.editor;
+    let from = editor.getCursor("from");
+    let to = editor.getCursor("to");
+    let start = editor.posToOffset(from);
+    let end = editor.posToOffset(to);
+    if (start === end && (["clear", "quote", "bullet", "number", "check", "indent", "outdent"].includes(id) || id.startsWith("h"))) {
+      from = { line: from.line, ch: 0 };
+      to = { line: to.line, ch: editor.getLine(to.line).length };
+      start = editor.posToOffset(from);
+      end = editor.posToOffset(to);
+    }
+    const original = editor.getValue();
+    const transformed = transformText(original, start, end, id);
+    editor.replaceRange(transformed.value.slice(start, transformed.value.length - (original.length - end)), from, to);
+    editor.setCursor(editor.offsetToPos(transformed.cursor));
+    editor.focus();
   }
 
   async entriesForFile(file: TFile, providedRaw?: string): Promise<Entry[]> {

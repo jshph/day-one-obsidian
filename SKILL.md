@@ -49,6 +49,7 @@ Move the history, preserve the habit. Imported entries keep useful Day One metad
 - Imported metadata is preserved compactly; the plugin presents it rather than asking the user to manage it.
 - Daily Notes uses a minimal `## Journal` template.
 - `Cmd/Ctrl+Shift+J` opens Quick Capture and appends a timestamped entry.
+- The editor's bottom-right `Aa` button and Quick Capture strip expose familiar rich-text actions while storing portable Markdown (with `<u>` only for underline).
 - List, photo, map, and interactive calendar views lead into Obsidian's normal Markdown editor.
 - Phones use a touch-first timeline, photo calendar, bottom journal navigation, full-width editor, and safe-area-aware capture sheet.
 - The first embedded image supplies calendar artwork. Missing remote originals remain explicitly reported.

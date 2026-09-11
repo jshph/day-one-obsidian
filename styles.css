@@ -152,6 +152,10 @@ body.day-one-vault .markdown-preview-view h2 { margin-top: 1.5em; font-size: 15p
 .day-one-capture-modal .modal-title { font-size: 23px; }
 .day-one-capture-hint { margin: 5px 0 15px; color: var(--text-muted); font-size: 13px; }
 .day-one-capture-modal textarea { width: 100%; padding: 15px; resize: vertical; border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-primary); font: 17px/1.55 var(--font-text); }
+.day-one-capture-format { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 5px 7px; overflow: hidden; border: 1px solid var(--background-modifier-border); border-radius: 11px; background: var(--background-secondary); }
+.day-one-format-aa { flex: 0 0 auto; padding: 0 7px; color: var(--day-one-blue); font-size: 14px; font-weight: 700; }
+.day-one-capture-format-scroll { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.day-one-capture-format-scroll::-webkit-scrollbar { display: none; }
 .day-one-capture-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
 @media (max-width: 1200px) {
@@ -599,7 +603,7 @@ body.day-one-vault .day-one-editor-meta-bar {
   align-items: center;
   gap: 16px;
   min-height: 35px;
-  padding: 0 14px;
+  padding: 0 66px 0 14px;
   overflow: hidden;
   color: #adb1b4;
   background: color-mix(in srgb, var(--background-primary) 94%, transparent);
@@ -607,6 +611,80 @@ body.day-one-vault .day-one-editor-meta-bar {
   font: 13px/1 "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
   white-space: nowrap;
   backdrop-filter: blur(12px);
+}
+
+body.day-one-vault .day-one-format-toolbar {
+  position: absolute;
+  z-index: 12;
+  right: 10px;
+  bottom: 4px;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body.day-one-vault .day-one-format-trigger {
+  width: 42px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: #92979a;
+  background: transparent;
+  box-shadow: none;
+  font: 650 13px/1 inherit;
+}
+
+body.day-one-vault .day-one-format-trigger:hover,
+body.day-one-vault .day-one-format-toolbar.is-expanded .day-one-format-trigger {
+  color: var(--day-one-blue);
+  background: color-mix(in srgb, var(--day-one-blue) 12%, transparent);
+}
+
+body.day-one-vault .day-one-format-panel {
+  position: absolute;
+  right: 0;
+  bottom: 38px;
+  display: none;
+  grid-template-columns: repeat(8, 38px);
+  gap: 4px;
+  width: max-content;
+  max-width: min(356px, calc(100vw - 28px));
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--background-primary) 96%, transparent);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(20px);
+}
+
+body.day-one-vault .day-one-format-toolbar.is-expanded .day-one-format-panel {
+  display: grid;
+}
+
+.day-one-format-action {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 34px;
+  min-width: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+  font: 650 11px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+.day-one-format-action:hover,
+.day-one-format-action:focus-visible {
+  color: var(--day-one-blue);
+  background: color-mix(in srgb, var(--day-one-blue) 11%, transparent);
+}
+
+.day-one-format-action svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.9;
 }
 
 body.day-one-vault .day-one-editor-meta-bar .journal {
@@ -1194,8 +1272,39 @@ body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
   body.day-one-vault .day-one-editor-meta-bar {
     min-height: calc(45px + env(safe-area-inset-bottom));
     gap: 10px;
-    padding: 0 14px env(safe-area-inset-bottom);
+    padding: 0 66px env(safe-area-inset-bottom) 14px;
     font-size: 11px;
+  }
+
+  body.day-one-vault .day-one-format-toolbar {
+    right: 9px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  body.day-one-vault .day-one-format-trigger {
+    width: 44px;
+    height: 32px;
+    font-size: 15px;
+    touch-action: manipulation;
+  }
+
+  body.day-one-vault .day-one-format-panel {
+    right: -1px;
+    bottom: 40px;
+    grid-template-columns: repeat(7, 40px);
+    gap: 5px;
+    max-width: calc(100vw - 18px);
+    max-height: min(260px, 42vh);
+    padding: 9px;
+    overflow-y: auto;
+    border-radius: 15px;
+  }
+
+  body.day-one-vault .day-one-format-action {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    touch-action: manipulation;
   }
 
   body.day-one-vault .day-one-capture-modal {
@@ -1212,6 +1321,11 @@ body.theme-dark.day-one-vault .mode-calendar .day-one-calendar-day.has-entry {
   body.day-one-vault .day-one-capture-modal textarea {
     min-height: 38vh;
     font-size: 17px;
+  }
+
+  body.day-one-vault .day-one-capture-format {
+    margin-inline: -2px;
+    padding-block: 6px;
   }
 
   body.day-one-vault .day-one-capture-actions button {
