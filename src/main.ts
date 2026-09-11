@@ -457,11 +457,12 @@ export default class DayOneShellPlugin extends Plugin {
   }
 
   onunload(): void {
-    document.body.removeClass("day-one-vault", "day-one-mobile");
+    document.body.removeClass("day-one-vault", "day-one-mobile", "day-one-mobile-editor-open");
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
   }
 
   async activateView(): Promise<void> {
+    document.body.removeClass("day-one-mobile-editor-open");
     let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
     if (!leaf) {
       leaf = Platform.isMobile
@@ -490,12 +491,14 @@ export default class DayOneShellPlugin extends Plugin {
           view.containerEl.querySelector(".day-one-editor-meta-bar")?.remove();
           view.containerEl.querySelector(".day-one-entry-jumpbar")?.remove();
           view.containerEl.querySelector(".day-one-format-toolbar")?.remove();
+          view.containerEl.querySelector(".day-one-mobile-journal-back")?.remove();
         }
       }
     }, 80);
   }
 
   private async decorateEditor(view: MarkdownView, file: TFile, label: HTMLElement): Promise<void> {
+    const header = label.parentElement ?? view.containerEl;
     const raw = await this.app.vault.cachedRead(file);
     view.containerEl.toggleClass("has-day-one-import", raw.includes("<!-- dayone-entry:"));
     const entries = await this.entriesForFile(file, raw);
@@ -507,6 +510,15 @@ export default class DayOneShellPlugin extends Plugin {
         ? `${moment(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} · ${entries.length} entries`
         : displayTimestamp(entries[0]?.date ?? moment(file.basename, "YYYY-MM-DD")));
     label.show();
+    let back = header.querySelector<HTMLButtonElement>(".day-one-mobile-journal-back");
+    if (!back) {
+      back = header.createEl("button", {
+        cls: "day-one-mobile-journal-back",
+        attr: { type: "button", title: "Back to Journal", "aria-label": "Back to Journal" },
+      });
+      setIcon(back, "chevron-left");
+      back.onclick = () => void this.activateView();
+    }
     this.ensureFormatToolbar(view);
 
     let bar = view.containerEl.querySelector<HTMLElement>(".day-one-editor-meta-bar");
@@ -677,6 +689,7 @@ export default class DayOneShellPlugin extends Plugin {
   async openFile(file: TFile, line?: number): Promise<void> {
     const markdownLeaf = this.app.workspace.getLeavesOfType("markdown")[0] ?? this.app.workspace.getLeaf("tab");
     await markdownLeaf.openFile(file);
+    document.body.addClass("day-one-mobile-editor-open");
     this.app.workspace.setActiveLeaf(markdownLeaf, { focus: true });
     this.updateEditorDates();
     if (line !== undefined && markdownLeaf.view instanceof MarkdownView) {

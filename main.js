@@ -4428,11 +4428,12 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     });
   }
   onunload() {
-    document.body.removeClass("day-one-vault", "day-one-mobile");
+    document.body.removeClass("day-one-vault", "day-one-mobile", "day-one-mobile-editor-open");
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
   }
   async activateView() {
     var _a;
+    document.body.removeClass("day-one-mobile-editor-open");
     let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
     if (!leaf) {
       leaf = import_obsidian.Platform.isMobile ? this.app.workspace.getLeaf("tab") : (_a = this.app.workspace.getLeftLeaf(false)) != null ? _a : this.app.workspace.getLeaf("split", "vertical");
@@ -4442,7 +4443,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
   }
   updateEditorDates() {
     window.setTimeout(() => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
         const view = leaf.view;
         if (!(view instanceof import_obsidian.MarkdownView)) continue;
@@ -4459,12 +4460,14 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
           (_a = view.containerEl.querySelector(".day-one-editor-meta-bar")) == null ? void 0 : _a.remove();
           (_b = view.containerEl.querySelector(".day-one-entry-jumpbar")) == null ? void 0 : _b.remove();
           (_c = view.containerEl.querySelector(".day-one-format-toolbar")) == null ? void 0 : _c.remove();
+          (_d = view.containerEl.querySelector(".day-one-mobile-journal-back")) == null ? void 0 : _d.remove();
         }
       }
     }, 80);
   }
   async decorateEditor(view, file, label) {
-    var _a, _b;
+    var _a, _b, _c;
+    const header = (_a = label.parentElement) != null ? _a : view.containerEl;
     const raw = await this.app.vault.cachedRead(file);
     view.containerEl.toggleClass("has-day-one-import", raw.includes("<!-- dayone-entry:"));
     const entries = await this.entriesForFile(file, raw);
@@ -4473,8 +4476,17 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
       return ((_a2 = this.focusedEntry) == null ? void 0 : _a2.path) === file.path && this.focusedEntry.line === entry.line;
     });
     view.containerEl.toggleClass("has-multiple-day-one-entries", entries.length > 1);
-    label.setText(focused ? displayTimestamp(focused.date) : entries.length > 1 ? `${(0, import_moment.default)(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} \xB7 ${entries.length} entries` : displayTimestamp((_b = (_a = entries[0]) == null ? void 0 : _a.date) != null ? _b : (0, import_moment.default)(file.basename, "YYYY-MM-DD")));
+    label.setText(focused ? displayTimestamp(focused.date) : entries.length > 1 ? `${(0, import_moment.default)(file.basename, "YYYY-MM-DD").format("ddd, MMM D, YYYY")} \xB7 ${entries.length} entries` : displayTimestamp((_c = (_b = entries[0]) == null ? void 0 : _b.date) != null ? _c : (0, import_moment.default)(file.basename, "YYYY-MM-DD")));
     label.show();
+    let back = header.querySelector(".day-one-mobile-journal-back");
+    if (!back) {
+      back = header.createEl("button", {
+        cls: "day-one-mobile-journal-back",
+        attr: { type: "button", title: "Back to Journal", "aria-label": "Back to Journal" }
+      });
+      (0, import_obsidian.setIcon)(back, "chevron-left");
+      back.onclick = () => void this.activateView();
+    }
     this.ensureFormatToolbar(view);
     let bar = view.containerEl.querySelector(".day-one-editor-meta-bar");
     if (!bar) bar = view.containerEl.createDiv({ cls: "day-one-editor-meta-bar" });
@@ -4639,6 +4651,7 @@ var DayOneShellPlugin = class extends import_obsidian.Plugin {
     var _a;
     const markdownLeaf = (_a = this.app.workspace.getLeavesOfType("markdown")[0]) != null ? _a : this.app.workspace.getLeaf("tab");
     await markdownLeaf.openFile(file);
+    document.body.addClass("day-one-mobile-editor-open");
     this.app.workspace.setActiveLeaf(markdownLeaf, { focus: true });
     this.updateEditorDates();
     if (line !== void 0 && markdownLeaf.view instanceof import_obsidian.MarkdownView) {

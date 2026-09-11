@@ -1,6 +1,6 @@
 {
   "name": "day-one-obsidian-shell",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "An agent-guided Day One importer and familiar Obsidian journaling experience.",
   "license": "MIT",
   "repository": "github:jshph/day-one-obsidian",
